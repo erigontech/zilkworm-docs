@@ -54,7 +54,7 @@ git submodule foreach 'git lfs pull'
 
 ```bash
 cd zilkworm/qemu_runner
-make rv32im_eest_blockchain_tests
+make eest-rv32
 ```
 
 That would build the project for rv32im and invoke `ctest` to launch a bunch of `qemu-system-riscv32` instances in the background. Each of these instances is passed with a JSON file to run as a test.\
