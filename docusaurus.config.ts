@@ -9,7 +9,7 @@ const config: Config = {
   url: 'https://zilkworm.erigon.tech',
   baseUrl: '/',
   organizationName: 'erigontech',
-  projectName: 'zilkworm',
+  projectName: 'zilkworm-docs',
   trailingSlash: false,
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'throw',

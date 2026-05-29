@@ -2,7 +2,7 @@
 """Generate llms.txt (page index) and llms-full.txt (full corpus) from docs/.
 
 Outputs both to ../static/ so they're served at /llms.txt and /llms-full.txt.
-Run from the docs/site directory:
+Run from the repo root:
 
     python3 scripts/generate-llms.py
 """
