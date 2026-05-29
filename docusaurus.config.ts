@@ -86,6 +86,7 @@ const config: Config = {
   themeConfig: {
     metadata: [
       {name: 'description', content: 'Official documentation for Zilkworm — a native, lightweight, performant ZKEVM core written in C++.'},
+      {name: 'theme-color', content: '#EF7716'},
       {property: 'og:type', content: 'website'},
       {property: 'og:site_name', content: 'Zilkworm Documentation'},
       {property: 'og:image', content: 'https://zilkworm.erigon.tech/img/og-image.png'},
