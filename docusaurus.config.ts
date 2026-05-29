@@ -107,8 +107,8 @@ const config: Config = {
           label: 'Documentation',
         },
         {
-          to: '/collaborations',
-          label: 'Collaborations',
+          to: '/collaboration',
+          label: 'Collaboration',
           position: 'left',
         },
         {

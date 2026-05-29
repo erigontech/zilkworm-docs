@@ -2,10 +2,10 @@ import React from 'react';
 import Layout from '@theme/Layout';
 import styles from './index.module.css';
 
-export default function Collaborations(): React.ReactElement {
+export default function Collaboration(): React.ReactElement {
   return (
     <Layout
-      title="Collaborations"
+      title="Collaboration"
       description="Get in touch with the Zilkworm team to explore ways we can boost blockchains with ZK together."
     >
       <main className={styles.main}>
