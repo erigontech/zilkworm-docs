@@ -177,7 +177,7 @@ $ user@machine-with-gpu
 docker run --gpus all --rm --network host -v "$PWD:/work:rw" -v /var/run/docker.sock:/var/run/docker.sock  -w /work -it --entrypoint bash somnergy/z6m_prover
 
 root@instance-20250919-091229:/work# 
-SP1_PROVER=cuda RUST_BACKTRACE=full RUST_LOG=info --prove --n 1 --file-name test.json
+SP1_PROVER=cuda RUST_BACKTRACE=full RUST_LOG=info z6m_prover prove --n 1 --file-name test.json
 ```
 
 ---
@@ -320,6 +320,7 @@ git clone https://github.com/erigontech/zilkworm
 Make sure to get the submodules (there are a few). This may take a bit of time:
 
 ```bash
+cd zilkworm
 git submodule update --init --recursive
 ```
 
@@ -378,6 +379,7 @@ Get the latest source for Zilkworm and the submodules. Also get all the lfs host
 
 ```bash
 git clone https://github.com/erigontech/zilkworm
+cd zilkworm
 git submodule update --init --recursive
 git submodule foreach 'git lfs pull'
 ```

@@ -45,6 +45,7 @@ Get the latest source for Zilkworm and the submodules. Also get all the lfs host
 
 ```bash
 git clone https://github.com/erigontech/zilkworm
+cd zilkworm
 git submodule update --init --recursive
 git submodule foreach 'git lfs pull'
 ```

@@ -50,6 +50,7 @@ git clone https://github.com/erigontech/zilkworm
 Make sure to get the submodules (there are a few). This may take a bit of time:
 
 ```bash
+cd zilkworm
 git submodule update --init --recursive
 ```
 
