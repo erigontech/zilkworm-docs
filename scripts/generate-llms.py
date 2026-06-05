@@ -9,8 +9,10 @@ Run from the repo root:
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 SITE_URL = "https://zilkworm.erigon.tech"
@@ -117,12 +119,63 @@ def write_full(pages: list[dict[str, str]]) -> str:
     return "\n".join(chunks).rstrip() + "\n"
 
 
-def main() -> None:
-    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+def build() -> tuple[str, str, int]:
+    """Regenerate both artifacts in memory and return (llms.txt, llms-full.txt, n_pages)."""
     pages = collect_pages()
-    (STATIC_DIR / "llms.txt").write_text(write_index(pages))
-    (STATIC_DIR / "llms-full.txt").write_text(write_full(pages))
-    print(f"Wrote {STATIC_DIR / 'llms.txt'}  ({len(pages)} pages)")
+    return write_index(pages), write_full(pages), len(pages)
+
+
+def _outputs(llms_txt: str, llms_full_txt: str) -> list[tuple[Path, str]]:
+    return [
+        (STATIC_DIR / "llms.txt", llms_txt),
+        (STATIC_DIR / "llms-full.txt", llms_full_txt),
+    ]
+
+
+def write_outputs(llms_txt: str, llms_full_txt: str) -> None:
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    for path, content in _outputs(llms_txt, llms_full_txt):
+        path.write_text(content)
+
+
+def check_outputs(llms_txt: str, llms_full_txt: str) -> list[Path]:
+    """Return the list of output files whose committed content has drifted."""
+    stale: list[Path] = []
+    for path, expected in _outputs(llms_txt, llms_full_txt):
+        try:
+            actual = path.read_text()
+        except FileNotFoundError:
+            actual = ""
+        if actual != expected:
+            stale.append(path)
+    return stale
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Generate llms.txt artifacts.")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Exit non-zero if regenerated content differs from committed files. "
+             "For CI use; does not write any files.",
+    )
+    args = parser.parse_args()
+
+    llms_txt, llms_full_txt, n_pages = build()
+
+    if args.check:
+        stale = check_outputs(llms_txt, llms_full_txt)
+        if stale:
+            print("ERROR: regenerated content differs from committed files:", file=sys.stderr)
+            for path in stale:
+                print(f"  {path}", file=sys.stderr)
+            print("Run: python3 scripts/generate-llms.py", file=sys.stderr)
+            sys.exit(1)
+        print(f"OK: llms files match regenerated content ({n_pages} pages)")
+        return
+
+    write_outputs(llms_txt, llms_full_txt)
+    print(f"Wrote {STATIC_DIR / 'llms.txt'}  ({n_pages} pages)")
     print(f"Wrote {STATIC_DIR / 'llms-full.txt'}")
 
 
