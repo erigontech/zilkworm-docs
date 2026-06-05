@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: The Zilkworm project at a glance.
+description: Zilkworm is an evolution of Erigon's C++ Silkworm client focused on zero-knowledge proofs — a RISC-V-targeted core that proves full Ethereum block state transitions.
 sidebar_position: 2
 ---
 

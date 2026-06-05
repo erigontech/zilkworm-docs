@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /search
 
 Sitemap: https://zilkworm.erigon.tech/sitemap.xml

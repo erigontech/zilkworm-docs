@@ -1,6 +1,6 @@
 ---
 title: How it works
-description: Technical details of the Zilkworm prover.
+description: How the Zilkworm prover works — the C++ EVM core runs as riscv32im firmware inside a zkVM that traces execution and proves it with a pluggable backend such as SP1.
 sidebar_position: 4
 ---
 

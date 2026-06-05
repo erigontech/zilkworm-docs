@@ -79,6 +79,10 @@ const config: Config = {
         },
         blog: false as false,
         theme: {customCss: './src/css/custom.css'},
+        sitemap: {
+          // The client-side search results page has no indexable content.
+          ignorePatterns: ['/search'],
+        },
       } satisfies Preset.Options,
     ],
   ],
