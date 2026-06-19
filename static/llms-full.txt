@@ -177,7 +177,7 @@ $ user@machine-with-gpu
 docker run --gpus all --rm --network host -v "$PWD:/work:rw" -v /var/run/docker.sock:/var/run/docker.sock  -w /work -it --entrypoint bash somnergy/z6m_prover
 
 root@instance-20250919-091229:/work# 
-SP1_PROVER=cuda RUST_BACKTRACE=full RUST_LOG=info z6m_prover prove --n 1 --file-name test.json
+SP1_PROVER=cuda RUST_BACKTRACE=full RUST_LOG=info z6m_prover prove --block-number 1 --file-name test.json
 ```
 
 ---
@@ -388,7 +388,7 @@ git submodule foreach 'git lfs pull'
 
 ```bash
 cd zilkworm/qemu_runner
-make rv32im_eest_blockchain_tests
+make eest-rv32
 ```
 
 That would build the project for rv32im and invoke `ctest` to launch a bunch of `qemu-system-riscv32` instances in the background. Each of these instances is passed with a JSON file to run as a test.\

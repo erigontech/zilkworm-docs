@@ -104,7 +104,7 @@ const capabilities: Card[] = [
 
 const exampleCommand = `// Create block proofs in one command
 z6m_prover prove --block-number 23456789 --proof-path proof.json
-z6m_prover verify proof.json`;
+z6m_prover verify --proof-path proof.json --vk-path vk.bin`;
 
 export default function Home(): React.ReactElement {
   return (
