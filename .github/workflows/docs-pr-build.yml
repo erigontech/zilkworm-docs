@@ -22,7 +22,7 @@ jobs:
           python3 scripts/generate-llms.py --check
           python3 -m unittest discover scripts -v
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
