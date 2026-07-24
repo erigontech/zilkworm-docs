@@ -18,7 +18,7 @@ export default function NotFoundContent(): React.ReactElement {
         <div style={{
           fontFamily: "'Montserrat', sans-serif", fontWeight: 800,
           fontSize: 'clamp(5rem, 18vw, 10rem)', lineHeight: 1,
-          color: '#EF7716', marginBottom: '1.5rem',
+          color: '#1F9D3E', marginBottom: '1.5rem',
         }}>404</div>
 
         <h1 style={{

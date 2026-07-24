@@ -18,6 +18,9 @@
 .heroLogo {
   height: clamp(72px, 11vw, 140px);
   width: auto;
+}
+
+.heroLogoLight {
   display: inline-block;
 }
 
@@ -45,18 +48,18 @@
 
 .announce {
   display: inline-block;
-  border: 1px solid rgba(239, 119, 22, 0.45);
-  background: rgba(239, 119, 22, 0.08);
+  border: 1px solid rgba(31, 157, 62, 0.45);
+  background: rgba(31, 157, 62, 0.08);
   color: var(--ifm-font-color-base);
   padding: 0.65rem 1rem;
-  border-radius: 8px;
+  border-radius: 0;
   font-size: 0.95rem;
   line-height: 1.45;
   margin-bottom: 2.25rem;
 }
 
 .announce a {
-  color: #EF7716;
+  color: #1F9D3E;
   font-weight: 700;
   text-decoration: none;
 }
@@ -93,7 +96,7 @@
   align-items: center;
   justify-content: center;
   padding: 0.7rem 1.4rem;
-  border-radius: 6px;
+  border-radius: 0;
   font-weight: 700;
   font-size: 0.95rem;
   text-decoration: none;
@@ -101,15 +104,15 @@
 }
 
 .ctaPrimary {
-  background: #EF7716;
+  background: #1F9D3E;
   color: #FFFFFF !important;
-  border: 1px solid #EF7716;
+  border: 1px solid #1F9D3E;
 }
 
 .ctaPrimary:hover {
-  background: #D4660F;
-  border-color: #D4660F;
-  box-shadow: 0 0 14px rgba(239, 119, 22, 0.55);
+  background: #1C8E38;
+  border-color: #1C8E38;
+  box-shadow: 0 0 14px rgba(31, 157, 62, 0.55);
   text-decoration: none;
 }
 
@@ -120,8 +123,8 @@
 }
 
 .ctaSecondary:hover {
-  border-color: #EF7716;
-  color: #EF7716 !important;
+  border-color: #1F9D3E;
+  color: #1F9D3E !important;
   text-decoration: none;
 }
 
@@ -148,16 +151,16 @@
 
 .card {
   border: 1px solid rgba(127, 127, 127, 0.2);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 1.5rem;
   background: var(--ifm-background-surface-color, rgba(127, 127, 127, 0.04));
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
-  border-color: #EF7716;
+  border-color: #1F9D3E;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 119, 22, 0.12);
+  box-shadow: 0 6px 20px rgba(31, 157, 62, 0.12);
 }
 
 .cardIcon {
@@ -165,7 +168,7 @@
   width: 2rem;
   height: 2rem;
   margin-bottom: 1rem;
-  color: #EF7716;
+  color: #1F9D3E;
   flex-shrink: 0;
 }
 

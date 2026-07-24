@@ -119,7 +119,7 @@ const config: Config = {
         {
           type: 'html',
           position: 'right',
-          value: '<a href="https://erigon.tech/blog/" target="_blank" rel="noopener noreferrer" class="navbar-blog-btn" aria-label="Blog">Blog</a>',
+          value: '<a href="https://zilkworm.hashnode.dev" target="_blank" rel="noopener noreferrer" class="navbar-blog-btn" aria-label="Blog">Blog</a>',
         },
         {
           type: 'html',

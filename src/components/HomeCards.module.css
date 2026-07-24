@@ -9,7 +9,7 @@
   display: block;
   padding: 1.25rem 1.4rem;
   border: 1px solid rgba(127, 127, 127, 0.22);
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--ifm-background-surface-color, rgba(127, 127, 127, 0.04));
   color: var(--ifm-font-color-base) !important;
   text-decoration: none !important;
@@ -17,9 +17,9 @@
 }
 
 .card:hover {
-  border-color: #EF7716;
+  border-color: #1F9D3E;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 119, 22, 0.12);
+  box-shadow: 0 6px 20px rgba(31, 157, 62, 0.12);
 }
 
 .title {
