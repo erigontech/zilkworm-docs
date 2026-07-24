@@ -3,9 +3,9 @@ import Link from '@docusaurus/Link';
 
 const cards = [
   {label: 'Welcome',         desc: 'Start here — overview of Zilkworm and the documentation map.', to: '/documentation'},
-  {label: 'Introduction',    desc: 'The Zilkworm project at a glance.',                            to: '/documentation/basics/introduction'},
-  {label: 'Getting Started', desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/basics/getting-started'},
-  {label: 'How it works',    desc: 'Technical details of the prover pipeline.',                    to: '/documentation/basics/how-it-works'},
+  {label: 'Introduction',    desc: 'The Zilkworm project at a glance.',                            to: '/documentation/getting-started/introduction'},
+  {label: 'Getting Started', desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/getting-started'},
+  {label: 'How it works',    desc: 'Technical details of the prover pipeline.',                    to: '/documentation/getting-started/how-it-works'},
   {label: 'Use Cases',       desc: 'Block proofs, rollups, and private enterprise EVM chains.',    to: '/documentation/use-cases/ethereum-block-proofs'},
   {label: 'GitHub',          desc: 'Source code, issues, and releases.',                           href: 'https://github.com/erigontech/zilkworm'},
 ];

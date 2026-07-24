@@ -155,7 +155,7 @@ export default function Home(): React.ReactElement {
           </div>
 
           <div className={styles.ctaRow}>
-            <Link className={styles.ctaPrimary} to="/documentation/basics/getting-started">
+            <Link className={styles.ctaPrimary} to="/documentation/getting-started">
               Get Started
             </Link>
             <Link className={styles.ctaSecondary} to="/documentation">
