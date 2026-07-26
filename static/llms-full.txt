@@ -3,7 +3,7 @@
 ---
 # Background
 
-Source: https://zilkworm.erigon.tech/documentation/basics/background
+Source: https://zilkworm.erigon.tech/documentation/getting-started/background
 
 _Why Zilkworm exists — Ethereum scaling, ZK proofs, and the case for a native C++ ZKEVM core._
 
@@ -32,7 +32,7 @@ Essentially, it's a stateless execution engine that takes the pre-state of a blo
 ---
 # FAQs
 
-Source: https://zilkworm.erigon.tech/documentation/basics/faqs
+Source: https://zilkworm.erigon.tech/documentation/getting-started/faqs
 
 _Frequently asked questions about Zilkworm — benchmarks, team, timeline, integration plans, and prover backends._
 
@@ -80,7 +80,7 @@ The first rollout will have SP1 as the prover. We will rollout with others in du
 ---
 # Getting Started
 
-Source: https://zilkworm.erigon.tech/documentation/basics/getting-started
+Source: https://zilkworm.erigon.tech/documentation/getting-started/getting-started
 
 _Run the Zilkworm prover via the pre-built Docker image — setup, block fetch, dry-run execute, prove, and CUDA acceleration._
 
@@ -183,7 +183,7 @@ SP1_PROVER=cuda RUST_BACKTRACE=full RUST_LOG=info z6m_prover prove --n 1 --file-
 ---
 # How it works
 
-Source: https://zilkworm.erigon.tech/documentation/basics/how-it-works
+Source: https://zilkworm.erigon.tech/documentation/getting-started/how-it-works
 
 _How the Zilkworm prover works — the C++ EVM core runs as riscv32im firmware inside a zkVM that traces execution and proves it with a pluggable backend such as SP1._
 
@@ -235,7 +235,7 @@ Cryptographic operations are heavy, and the RV32IM guest has no business carryin
 ---
 # Introduction
 
-Source: https://zilkworm.erigon.tech/documentation/basics/introduction
+Source: https://zilkworm.erigon.tech/documentation/getting-started/introduction
 
 _Zilkworm is an evolution of Erigon's C++ Silkworm client focused on zero-knowledge proofs — a RISC-V-targeted core that proves full Ethereum block state transitions._
 

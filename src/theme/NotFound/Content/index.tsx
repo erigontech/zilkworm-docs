@@ -3,9 +3,9 @@ import Link from '@docusaurus/Link';
 
 const cards = [
   {label: 'Welcome',         desc: 'Start here — overview of Zilkworm and the documentation map.', to: '/documentation'},
-  {label: 'Introduction',    desc: 'The Zilkworm project at a glance.',                            to: '/documentation/basics/introduction'},
-  {label: 'Getting Started', desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/basics/getting-started'},
-  {label: 'How it works',    desc: 'Technical details of the prover pipeline.',                    to: '/documentation/basics/how-it-works'},
+  {label: 'Introduction',    desc: 'The Zilkworm project at a glance.',                            to: '/documentation/getting-started/introduction'},
+  {label: 'Getting Started', desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/getting-started'},
+  {label: 'How it works',    desc: 'Technical details of the prover pipeline.',                    to: '/documentation/getting-started/how-it-works'},
   {label: 'Use Cases',       desc: 'Block proofs, rollups, and private enterprise EVM chains.',    to: '/documentation/use-cases/ethereum-block-proofs'},
   {label: 'GitHub',          desc: 'Source code, issues, and releases.',                           href: 'https://github.com/erigontech/zilkworm'},
 ];
@@ -18,7 +18,7 @@ export default function NotFoundContent(): React.ReactElement {
         <div style={{
           fontFamily: "'Montserrat', sans-serif", fontWeight: 800,
           fontSize: 'clamp(5rem, 18vw, 10rem)', lineHeight: 1,
-          color: '#EF7716', marginBottom: '1.5rem',
+          color: '#1F9D3E', marginBottom: '1.5rem',
         }}>404</div>
 
         <h1 style={{

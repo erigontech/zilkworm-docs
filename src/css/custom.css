@@ -1,6 +1,6 @@
 /**
  * Erigon brand colors — light and dark theme.
- * Primary: #EF7716 (Erigon Orange), Hover: #D4660F
+ * Primary: #1F9D3E (Erigon Orange), Hover: #1C8E38
  * Light bg: #FFFFFF, Dark bg: #0A0A0A
  * Fonts: Montserrat ExtraBold (headings), Nunito Sans (body)
  */
@@ -48,16 +48,16 @@
   --ifm-heading-font-family: 'Montserrat', sans-serif;
   --ifm-heading-font-weight: 800;
   /* Erigon Orange scale */
-  --ifm-color-primary: #EF7716;
-  --ifm-color-primary-dark: #D4660F;
-  --ifm-color-primary-darker: #C55E0D;
-  --ifm-color-primary-darkest: #A34E0B;
-  --ifm-color-primary-light: #F28A33;
-  --ifm-color-primary-lighter: #F3923F;
-  --ifm-color-primary-lightest: #F6A862;
+  --ifm-color-primary: #1F9D3E;
+  --ifm-color-primary-dark: #1C8E38;
+  --ifm-color-primary-darker: #1A8534;
+  --ifm-color-primary-darkest: #156C2B;
+  --ifm-color-primary-light: #29AE4A;
+  --ifm-color-primary-lighter: #35B855;
+  --ifm-color-primary-lightest: #57C873;
 
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(239, 119, 22, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(31, 157, 62, 0.1);
 
   /* Light mode */
   --ifm-background-color: #FFFFFF;
@@ -66,7 +66,7 @@
   /* Navbar — light mode */
   --ifm-navbar-background-color: #FFFFFF;
   --ifm-navbar-link-color: #111111;
-  --ifm-navbar-link-hover-color: #EF7716;
+  --ifm-navbar-link-hover-color: #1F9D3E;
   --ifm-navbar-shadow: 0 1px 0 rgba(0,0,0,0.08);
 
   /* Navbar button tokens — light mode */
@@ -75,20 +75,20 @@
   --navbar-btn-color-muted: rgba(0,0,0,0.55);
 
   /* Active sidebar item */
-  --ifm-menu-color-active: #EF7716;
+  --ifm-menu-color-active: #1F9D3E;
 }
 
 [data-theme='dark'] {
   /* Same orange scale — readable on dark */
-  --ifm-color-primary: #EF7716;
-  --ifm-color-primary-dark: #D4660F;
-  --ifm-color-primary-darker: #C55E0D;
-  --ifm-color-primary-darkest: #A34E0B;
-  --ifm-color-primary-light: #F28A33;
-  --ifm-color-primary-lighter: #F3923F;
-  --ifm-color-primary-lightest: #F6A862;
+  --ifm-color-primary: #1F9D3E;
+  --ifm-color-primary-dark: #1C8E38;
+  --ifm-color-primary-darker: #1A8534;
+  --ifm-color-primary-darkest: #156C2B;
+  --ifm-color-primary-light: #29AE4A;
+  --ifm-color-primary-lighter: #35B855;
+  --ifm-color-primary-lightest: #57C873;
 
-  --docusaurus-highlighted-code-line-bg: rgba(239, 119, 22, 0.2);
+  --docusaurus-highlighted-code-line-bg: rgba(31, 157, 62, 0.2);
 
   /* Dark mode */
   --ifm-background-color: #0A0A0A;
@@ -98,7 +98,7 @@
   /* Navbar — dark mode */
   --ifm-navbar-background-color: #000000;
   --ifm-navbar-link-color: #FFFFFF;
-  --ifm-navbar-link-hover-color: #EF7716;
+  --ifm-navbar-link-hover-color: #1F9D3E;
   --ifm-navbar-shadow: none;
 
   /* Navbar button tokens — dark mode */
@@ -107,7 +107,7 @@
   --navbar-btn-color-muted: rgba(255,255,255,0.75);
 
   /* Active sidebar item */
-  --ifm-menu-color-active: #EF7716;
+  --ifm-menu-color-active: #1F9D3E;
 }
 
 /* ─── Brand typography enforcement ──────────────────────────────────────── */
@@ -151,15 +151,15 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--ifm-background-surface-color, var(--ifm-background-color));
 }
 .lp-card:hover {
-  border-color: #EF7716;
+  border-color: #1F9D3E;
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(239, 119, 22, 0.14);
+  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
 }
 .lp-icon {
   width: 2rem;
   height: 2rem;
   margin-bottom: 1rem;
-  color: #EF7716;
+  color: #1F9D3E;
   flex-shrink: 0;
 }
 .lp-card-title {
@@ -194,7 +194,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ifm-navbar-link-color);
 }
 .navbar__link--active {
-  color: #EF7716 !important;
+  color: #1F9D3E !important;
 }
 .navbar__items--left .navbar__item {
   font-family: 'Montserrat', sans-serif !important;
@@ -212,7 +212,7 @@ h1, h2, h3, h4, h5, h6 {
   transition: color 0.15s;
 }
 .navbar-github-icon:hover {
-  color: #EF7716 !important;
+  color: #1F9D3E !important;
 }
 
 .navbar-blog-btn {
@@ -230,13 +230,13 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1;
 }
 .navbar-blog-btn:hover {
-  border-color: #EF7716;
-  color: #EF7716 !important;
-  box-shadow: 0 0 12px rgba(239, 119, 22, 0.45);
+  border-color: #1F9D3E;
+  color: #1F9D3E !important;
+  box-shadow: 0 0 12px rgba(31, 157, 62, 0.45);
 }
 
 .navbar-release-btn {
-  background: #EF7716;
+  background: #1F9D3E;
   color: #FFFFFF !important;
   padding: 0.35rem 0.9rem;
   border-radius: 6px;
@@ -250,9 +250,9 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
 }
 .navbar-release-btn:hover {
-  background: #D4660F;
+  background: #1C8E38;
   color: #FFFFFF !important;
-  box-shadow: 0 0 14px rgba(239, 119, 22, 0.6);
+  box-shadow: 0 0 14px rgba(31, 157, 62, 0.6);
 }
 
 /* ─── Navbar GitHub icon link ────────────────────────────────────────────── */
@@ -269,8 +269,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .navbar-github-icon:hover {
-  color: #EF7716;
-  background-color: rgba(239, 119, 22, 0.08);
+  color: #1F9D3E;
+  background-color: rgba(31, 157, 62, 0.08);
 }
 
 .navbar-github-icon svg {
@@ -289,9 +289,9 @@ h1, h2, h3, h4, h5, h6 {
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 .pagination-nav__link:hover {
-  border-color: #EF7716 !important;
+  border-color: #1F9D3E !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(239, 119, 22, 0.14);
+  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
 }
 
 /* ─── Details / collapsible sections ─────────────────────────────────────── */
@@ -311,7 +311,7 @@ details.alert.alert--info {
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 details.alert.alert--info {
-  --docusaurus-details-decoration-color: #EF7716;
+  --docusaurus-details-decoration-color: #1F9D3E;
 }
 details.alert.alert--info summary {
   font-weight: 700;
@@ -335,15 +335,15 @@ details.alert.alert--info summary {
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 .card-404:hover {
-  border-color: #EF7716;
+  border-color: #1F9D3E;
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(239, 119, 22, 0.14);
+  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
 }
 
 /* ─── 404 page buttons ────────────────────────────────────────────────────── */
 
 .button-404-primary {
-  background: #EF7716;
+  background: #1F9D3E;
   color: #ffffff !important;
   padding: 0.65rem 1.6rem;
   border-radius: 6px;
@@ -353,7 +353,7 @@ details.alert.alert--info summary {
   transition: background 0.15s;
 }
 .button-404-primary:hover {
-  background: #D4660F;
+  background: #1C8E38;
   color: #ffffff !important;
 }
 .button-404-secondary {
@@ -367,7 +367,7 @@ details.alert.alert--info summary {
   transition: border-color 0.15s;
 }
 .button-404-secondary:hover {
-  border-color: #EF7716;
+  border-color: #1F9D3E;
   color: var(--ifm-font-color-base) !important;
 }
 
@@ -392,10 +392,10 @@ details.alert.alert--info summary {
   transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 .footer-social-btn:hover {
-  color: #EF7716 !important;
-  border-color: #EF7716 !important;
+  color: #1F9D3E !important;
+  border-color: #1F9D3E !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239,119,22,0.15);
+  box-shadow: 0 4px 12px rgba(31, 157, 62,0.15);
 }
 
 /* ─── Footer responsive (mobile) ────────────────────────────────────────── */
@@ -419,4 +419,177 @@ details.alert.alert--info summary {
     align-items: flex-start !important;
     gap: 0.6rem !important;
   }
+}
+
+/* ===================================================================
+   Boxy + terminal-ish UI (palette-agnostic: uses vars / 0 only)
+   =================================================================== */
+:root,
+[data-theme='dark'] {
+  --ifm-global-radius: 0px;
+  --ifm-button-border-radius: 0px;
+  --ifm-card-border-radius: 0px;
+  --ifm-code-border-radius: 0px;
+  --ifm-alert-border-radius: 0px;
+}
+
+/* Square the common components (covers hardcoded radii too) */
+.button,
+.card,
+.alert,
+.navbar__search-input,
+.dropdown__menu,
+.pagination-nav__link,
+.tabs__item,
+.theme-code-block,
+.breadcrumbs__link {
+  border-radius: 0 !important;
+}
+
+/* --- Sidebar: terminal menu (boxed, [+/-] sections) --- */
+/* dark mode uses a lighter shade of the brand green */
+:root { --brand-accent: var(--ifm-color-primary); }
+[data-theme='dark'] { --brand-accent: var(--ifm-color-primary-light); }
+
+/* drop the full-height divider line */
+.theme-doc-sidebar-container {
+  border-right: none !important;
+}
+.menu {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.86rem;
+  border: none;
+  padding: 0;
+  --ifm-menu-color-background-hover: transparent;
+  --ifm-menu-color-background-active: transparent;
+}
+/* the box hugs the items (content height), with more margin OUTSIDE + padding INSIDE */
+.menu > .menu__list {
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 8px;
+  margin: 1rem 0.75rem;
+  padding: 0;
+  height: fit-content;
+  overflow: hidden;
+}
+/* bigger spacing between items */
+.menu__list .menu__list-item {
+  margin: 0;
+}
+/* leaf items are their own bordered boxes */
+.menu__link:not(.menu__link--sublist) {
+  border: none;
+  transition: background-color .12s ease, color .12s ease;
+}
+/* category headers get their own border box, matching the leaf .menu__link */
+.menu__list-item-collapsible {
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 0;
+  margin: -1px -1px 0 -1px;
+  transition: border-color .12s ease, background-color .12s ease, color .12s ease;
+}
+/* last top-level option overlaps the outer box bottom border */
+.menu > .menu__list > .menu__list-item:last-child > .menu__link,
+.menu > .menu__list > .menu__list-item:last-child > .menu__list-item-collapsible {
+  margin-bottom: -1px;
+}
+/* selected / hovered / expanded option border paints on top of neighbours */
+.menu__link:hover,
+.menu__link--active,
+.menu__list-item:not(.menu__list-item--collapsed) > .menu__list-item-collapsible {
+  position: relative;
+  z-index: 1;
+}
+.menu__list-item-collapsible:hover {
+  background-color: transparent;
+}
+/* bigger padding inside each item */
+.menu__link {
+  padding: 0.77rem 0.9rem;
+}
+.menu__link:hover {
+  border-color: var(--brand-accent);
+  background-color: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+
+/* ---- Collapsible SECTION header: [Name] ......... [+/-] ---- */
+.menu__list-item-collapsible {
+  position: relative;
+}
+.menu__list-item-collapsible > .menu__link--sublist {
+  border: none;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+}
+/* kill the default chevron; draw a monospace + / - at the right edge */
+.menu__caret { display: none !important; }
+.menu__link--sublist-caret::after,
+.menu__link--sublist::after {
+  content: "+";
+  background: none !important;
+  -webkit-mask: none !important;
+  mask: none !important;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  transform: none !important;
+  margin-left: auto;
+  align-self: stretch;
+  margin-top: -0.7rem;
+  margin-bottom: -0.7rem;
+  display: flex;
+  align-items: center;
+  border-left: 1px solid var(--ifm-toc-border-color);
+  padding-left: 0.85rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 700;
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--brand-accent);
+}
+/* expanded (NOT collapsed) => solid green fill + white text + "-" */
+.menu__list-item:not(.menu__list-item--collapsed) > .menu__list-item-collapsible {
+  background-color: var(--brand-accent);
+  border-color: var(--brand-accent);
+}
+.menu__list-item:not(.menu__list-item--collapsed) > .menu__list-item-collapsible > .menu__link--sublist {
+  color: #fff;
+}
+.menu__list-item:not(.menu__list-item--collapsed) > .menu__list-item-collapsible > .menu__link--sublist::after {
+  content: "\2212";
+  color: #fff;
+  border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ---- Leaf (page) item: selected = transparent bg + solid square marker ---- */
+.menu__link--active:not(.menu__link--sublist) {
+  color: var(--brand-accent);
+  border-color: var(--brand-accent);
+  background-color: transparent;
+}
+.menu__link--active:not(.menu__link--sublist)::before {
+  content: "\25AA"; /* ▪ solid square */
+  color: var(--brand-accent);
+  font-size: 0.95em;
+  margin-right: 0.5rem;
+}
+
+/* --- Table of contents (right): terminal-ish --- */
+.table-of-contents {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+}
+.table-of-contents__link--active {
+  color: var(--ifm-color-primary);
+  font-weight: 700;
+}
+
+/* --- Navbar links + custom buttons: monospace (kept square above) --- */
+.navbar__link,
+.navbar-release-btn,
+.navbar-blog-btn,
+.breadcrumbs__link {
+  font-family: var(--ifm-font-family-monospace);
 }

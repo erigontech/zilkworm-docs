@@ -11,7 +11,7 @@ Welcome to the Zilkworm documentation. Here you can learn about the new fast ZKE
 ### Jump right in
 
 <HomeCards cards={[
-  {title: 'Introduction', body: 'The project at a glance.', to: '/documentation/basics/introduction'},
-  {title: 'How it works', body: 'Technical details of the prover.', to: '/documentation/basics/how-it-works'},
+  {title: 'Introduction', body: 'The project at a glance.', to: '/documentation/getting-started/introduction'},
+  {title: 'How it works', body: 'Technical details of the prover.', to: '/documentation/getting-started/how-it-works'},
   {title: 'Use Cases', body: 'Real-world applications and patterns.', to: '/documentation/use-cases/ethereum-block-proofs'},
 ]} />
