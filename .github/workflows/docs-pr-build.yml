@@ -31,6 +31,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check inlined tsconfig against @docusaurus/tsconfig
+        run: npm run check:tsconfig
+
       - name: Type check
         run: npm run typecheck
 
