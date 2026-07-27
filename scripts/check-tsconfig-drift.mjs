@@ -68,6 +68,24 @@ function stripJsonc(text) {
   return out;
 }
 
+// Order-insensitive comparison key. Object key order carries no meaning in
+// tsconfig, so upstream reordering must not read as drift.
+//
+// Arrays keep their order. Order matters in some (a `paths` entry is an ordered
+// fallback list) and not in others (`lib`, `types`). Preserving it everywhere is
+// the safe direction: a reordered `lib` reports drift that turns out to be
+// harmless, costing one reconciliation, whereas sorting arrays would silently
+// hide a real `paths` change.
+function canon(v) {
+  const norm = (x) =>
+    Array.isArray(x)
+      ? x.map(norm)
+      : x && typeof x === 'object'
+        ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, norm(x[k])]))
+        : x;
+  return JSON.stringify(norm(v));
+}
+
 function readOptions(file) {
   if (!fs.existsSync(file)) {
     console.error(`check-tsconfig-drift: missing ${file}\nRun \`npm ci\` first.`);
@@ -102,7 +120,7 @@ for (const key of [...seen].sort()) {
     problems.push(`  ${key}: added upstream (${JSON.stringify(upstream[key])}) — missing from our copy`);
   } else if (inOurs && !inUpstream) {
     problems.push(`  ${key}: removed upstream — still in our copy (${JSON.stringify(ours[key])})`);
-  } else if (JSON.stringify(ours[key]) !== JSON.stringify(upstream[key])) {
+  } else if (canon(ours[key]) !== canon(upstream[key])) {
     problems.push(`  ${key}: upstream ${JSON.stringify(upstream[key])} != ours ${JSON.stringify(ours[key])}`);
   }
 }
