@@ -3,182 +3,490 @@
 ---
 # Background
 
-Source: https://zilkworm.erigon.tech/documentation/getting-started/background
+Source: https://zilkworm.erigon.tech/documentation/fundamentals/background
 
-_Why Zilkworm exists — Ethereum scaling, ZK proofs, and the case for a native C++ ZKEVM core._
+_Background of the technology and internals of the zkEVM_
 
-There are several factors to take into account when thinking about the ZK future of EVMs and blockchains.
+# Background
 
-Firstly, today's validators on Ethereum-like chains are limited by the speed with which data can be transmitted across the network and then how fast a block can be re-executed. Verifying zero-knowledge proofs of blocks are much more efficient at achieving scaling than on the low end of the infrastructure spectrum. Following a successful rollout of this vision, consensus can progress without needing execute whole blocks. The end goal is then to provide a streamlined end to end application that can generate EVM + State Transition proofs for Ethereum or a similar blockchain.
+Zilkworm is a C++ Ethereum block execution engine, compiled to RISC-V and run inside a zkVM to produce cryptographic proofs of correct execution. This page explains the ideas behind that engine: what a block proof is, why RISC-V zkVMs make it practical, how Zilkworm is put together, and how it runs live today. For hands-on material, start with the [Quickstart](../getting-started/quickstart-hypercube.md) instead.
 
-Secondly, the ZK flow de-facto enables transaction privacy, as the exact nature or contents of the transactions are no longer needed to verify their correctness. This separates EVM itself from the consensus game and enables possibilities like private blockchains. This is not dissimilar to ZK-rollups themselves, but only more native to Ethereum itself with Zilkworm (and similar).
+This and subsequent pages would use the term "zkEVM" to mean the combined Zilkworm block execution code and the zkVM enclave.
 
-Thirdly, ZK prover backends have never been so performant and easy to work with. There has been an immense jump in prover performance over the past 2 years that makes real-time proving a reality today.
+## The proof flow
 
-### RISC and no risk
+To create a proof of a full block execution, the state prior to that block must be known. Only a fraction of the state is needed to execute that block (or verify its correctness).
 
-Software technology cannot evolve in isolation and it thrives when the stars of various software domains align. RISC-V's open source minimal ISA has seen massive growth of interest and innovation both in interesting high-performance low-power use cases as well as with provable computation sphere.
+When this block arrives, the corresponding chunk of state needed is evaluated and passed into the zkEVM. The zkEVM then runs the execution using that fork's rules and outputs a signal to certify whether the block is valid and the state-root of the transition is correct.
 
-The current generation of provers target minimal general purpose ISAs like RISC-V. That means existing client code and EVM code execution can be directly proved. Of course, this is a fairly new domain and it makes a ton more sense for a C++ or Rust software that has mature toolchains for this niche.
+The state chunk along with all the other data needed for a block is also called the witness. The witness is kept private, as in, the proof verifier ultimately does not need to know the witness to verify the correctness of the proof. In other words, there is no witness that can be passed to a correct zkEVM machinery to generate a bogus proof (the soundness property).
 
-For zero-knowledge proofs based EVM/blockchains the proof systems and the overall stacks used to be hand-crafted before and it used to take a while. Whereas now it means feature iterations aren't dependent on heavy developer turnaround time. Additionally, existing (native compilable) projects like EVMOne fits right into become.
+The proof is likely a fixed size around 300KB-1MB for any size of block. It is easy to verify, and a consumer grade laptop could do that in close to 10ms. This does not change with the size of the block.
 
-### EVM x zkVM = zkEVM
+If proofs are generated in "realtime", that is right after the block is produced, they can be used as an alternate mechanism to validate blocks. Thereby, proofs as a way of verifying blocks can help scale block's size.
 
-Zilkworm aims to make it easy to integrate different prover backends (zkVMs) that act on a similar ISA (currently only riscv32im and riscv64im). That means it integrates with prover solutions like Succinct's SP1, RISC0, Pico GPU Prover and so on.
+## RISC-V-based zkVMs
 
-Essentially, it's a stateless execution engine that takes the pre-state of a block from an existing execution trace and generates a proof of the state transition function.
+The zkVMs that Zilkworm targets, such as SP1 Hypercube and ZkSync Airbender, run RISC-V compiled programs and generate proof of correct execution. This means any arbitrary logic that can be written in a language with a RISC-V compiler and tooling can be proved.
+
+The zkVM emulates the RISC-V execution inside of a container. The elements of computing for the executor, such as memory, registers, the program counter are tracked. The state of these elements is recorded at every point of execution into a continuous trace. This trace is then passed through a prover that stitches together the proof of change of state, through intermediate constraints on various RISC-V operations.
+
+The proving is usually a heavily parallelizable operation and is performed well on compute units of a GPU. The prover passes the execution shards to multiple cores of multiple GPUs which then return intermediate first-level proofs. These first-level proofs are further recursed to create a chain of proof of valid-proofs. So, in this process they get compressed down to a manageably small size.
+
+In the current generation of general-purpose zkVM provers, STARK proofs are the most common. There is also support for compressing the STARK proof into a wrapped SNARK proof to further reduce the proof size and verification time.
+
+The choice of RISC-V as the ISA is quite apt. It is open-source, minimal, generic enough with wide enough adoption in the industry. While mainstream RISC-V personal computing devices are very rare, it is commonplace in embedded hardware still.
+
+In our initial assessment of viability of Zilkworm, it was important to note that C++ has mature support in the RISC-V ecosystem including efficient compilers and tooling. This is supplemented by the existence of many examples of high-performance C++ code for embedded systems. This means we can use those examples to improve the efficiency of Zilkworm going forward.
+
+## Zilkworm internals
+
+Zilkworm has 3 major components that are integrated together:
+
+- The core: handles block processing, witness, state and trie management
+- ZVM1 (a fork of EVMOne): handles EVM transaction processing
+- Prover: integrates to and handles zkVM execution and proving, written in rust
+
+The core is the part that the zkVM entrypoint eventually hands program execution to. It manages the loading of the witness into the state, its sanitization and basic checks, loads the block(s) and transaction(s) from the given payload and then invokes ZVM1's transaction execution mechanism to check per-transaction validity.
+
+After all transaction processing is complete, it performs post-block protocol actions and then goes through a Merkle-Patricia-Trie validation loop. This loop loads the tree in a fixed linear stack starting from the state-root of the parent header. It then verifies that all the pre-state is correct from the initially loaded witness, and applies all state changes after all the execution. Eventually the final state-root is calculated and matched with the one present in the current block's header.
+
+ZVM1 is Zilkworm's fork of EVMOne, a fast implementation of the EVM interpreter also written in C++. It reads the bytes in the code invoked by a transaction and executes the smart contract code while maintaining an internal stack of state after every opcode execution. It compounds the state changes and then hands over control back to the core loop.
+
+Finally, the prover consists of service-level code written in Rust that directly invokes the target zkVM's executor or prover. The program itself and its entrypoint are defined in the compiled ELF (in rv32- or rv64-im). The zkVM's internals handle the request for execution or proving and return the result. This means that a proof is generated using the zkVM's prover code (maintained by the respective zkVM team) on any attached GPUs on the current machine.
+
+### Repository map
+
+At runtime the components arrange into three layers: the native host, the C++ core that compiles to the guest program, and RISC-V toolchain specific to the zkVM:
+
+- **Prover host (Rust, `prover/*`, e.g. `prover/prover_hypercube/`).** Runs natively on x86_64 or ARM. It fetches block data and witness from an Ethereum node over JSON-RPC (`debug_getRawBlock`, `debug_executionWitness`), encodes them into a single binary blob (mfbd format) for the guest, drives the prove, and — in service mode — posts finished proofs to Ethproofs.
+- **Guest program (RISC-V ELF, `prover/guest_*`, e.g. `prover/guest_hypercube/`).** The program whose execution is actually proven. It reads the encoded input from the zkVM's stdin, hands it to the core, and commits the execution result (cumulative gas used, or a failure sentinel) as the proof's public output.
+- **Zilk core (C++ static library, `zilk_core/`).** A fork of Silkworm's core: execution, state, protocol rules, trie, RLP and types. It is compiled both natively (for development and testing via the `state_transition` CLI) and cross-compiled to RISC-V for the guest. ZVM1 lives alongside it in `third_party/evmone/`.
+
+The data flow through the layers is: **fetch** (host retrieves block + witness from a node) → **encode** (host packs them into the guest's input format) → **execute** (the zkVM runs the guest ELF, which calls into the C++ core to execute every transaction) → **prove** (the zkVM turns the execution trace into a succinct proof) → **verify** (anyone checks the proof against the guest program's verifying key).
+
+## Prover integration
+
+Prover is a term being used interchangeably with zkVM and can mean that or the overall mechanism of proving. In order to integrate a zkVM, its memory layout, entrypoint semantics, ecall semantics, exit semantics etc. need to be taken care of.
+
+Further, the zkVMs usually provide precompiled proving paths (custom circuits) for certain cryptographic operations such as Keccak, SHA, ECC, Big-Integer and others. They usually have different calling conventions. So these cryptographic calls are implemented as glue-code macros at various points within ZVM1 and the core. In our case, each wrapper compiles down to a single `ecall` instruction, and the zkVM executes the operation with a dedicated circuit, out of band. In the SP1 Hypercube integration this covers, among others, the Keccak-256 permutation (which dominates trie hashing), SHA-256 compression, secp256k1 point operations for ecrecover, BN254 and BLS12-381 curve and field arithmetic, and 256-bit modular multiplication.
+
+Another aspect of the integration is the guest's runtime environment. The guest is a bare-metal program: there is no operating system and no standard C library underneath it. Zilkworm's SP1 Hypercube guest therefore ships its own hand-written assembly entrypoint. It also contains some hand-tuned `memcpy`/`memmove` routines — inside a zkVM every instruction becomes trace rows to prove, so even these basics are written for minimal cycle count. The whole C++ codebase is cross-compiled with a bare-metal RISC-V GCC toolchain into a single rv64im ELF.
+
+The host side mirrors this: the Rust program in `prover/prover_hypercube/` embeds the guest ELF and uses the zkVM's SDK to execute it (for fast dry-runs) or prove it (on CPU, on a local GPU, or via a proving network). Because the proof commits to the exact guest binary through its verifying key, every proof also identifies precisely which version of Zilkworm produced it.
+
+## Live prover for mainnet
+
+An important aspect of Zilkworm's involvement in the community and the real world is its continuous participation in [Ethproofs](https://ethproofs.org: the public registry and leaderboard where provers post real-time proofs of Ethereum mainnet blocks, alongside proving time and cycle counts, on the same blocks as every other participating team.
+
+The `z6m_prover` binary has a service mode that follows the chain head in a continuous fetch → execute → prove loop, persisting each proof to disk, and three flags turn that same service into an Ethproofs-posting one — reporting each block as queued, proving, and finally proved with the serialized proof attached. Everything needed to run it — the host binary, the guest ELF, and the GPU proving server — ships in the `somnergy/z6m_prover` docker image, so anyone with an NVIDIA GPU and an RPC node exposing the debug namespace can reproduce the setup that proves mainnet blocks today.
+
+Running the live prover end to end is covered in the getting-started guides:
+
+- [Quickstart: Hypercube prover](../getting-started/quickstart-hypercube.md) — the fast path from docker pull to a first proof.
+- [Running the prover](../getting-started/running-the-prover.md) — service mode in depth, proof types, building from source.
+- [Ethproofs prover](../getting-started/ethproofs-prover.md) — cluster registration and the posting lifecycle.
 
 ---
-# FAQs
+# Write Your Own Rollups Using Zilkworm
 
-Source: https://zilkworm.erigon.tech/documentation/getting-started/faqs
+Source: https://zilkworm.erigon.tech/documentation/fundamentals/write-your-own-rollups-using-zilkworm
 
-_Frequently asked questions about Zilkworm — benchmarks, team, timeline, integration plans, and prover backends._
+_How Zilkworm could power L2/rollup proofs (projection — L2 execution and proving are not yet supported)._
 
-### Can we see some Benchmarks?
+## Introduction
 
-Yes, find Zilkworm's proofs by going to [EthProofs](https://ethproofs.org/)
+This article explores how Zilkworm can be used to generate proofs for an L2 rollup. This is made possible by the fact that most popular L2s and blockchain networks out there use EVMs under the hood.
 
-We are rapidly working to publish continuous results on [EthProofs](https://ethproofs.org/) and they will be published soon.\
-Case by case benchmarks and Tests-Matrix would be released in a couple of weeks.
+We give a brief introduction to rollups and their validity mechanisms before diving deeper into the technical bits and other considerations for an existing or new chain project.
 
-### Who's working on it?
+### Why a rollup?
 
-At the moment the work is being led by Erigon developers. This is a short term "experiment" and we are looking to partner with other organisations to further the efforts.  (reach out to [som@erigon.tech](mailto:som@erigon.tech) or  [pawel.bylica@erigon.tech](mailto:pawel.bylica@erigon.tech) for developer queries)
+It’s a known fact that Ethereum L1 has issues scaling transaction throughput and that’s why rollups can batch transactions, thereby lowering the costs and scaling the ecosystem.
 
-### What are the timelines?
+```mermaid
+flowchart LR
+    USERS["Users"]
+    subgraph L2["L2 rollup"]
+        SEQ["Sequencer"]
+        EXEC["Execute<br/>batch"]
+    end
+    subgraph L1["Ethereum L1"]
+        ROLLUP["Rollup<br/>contract"]
+    end
 
-We're actively working to deliver real-time Ethereum block proofs on 2 GPUs - follow progress on [EthProofs](https://ethproofs.org/).
+    USERS -->|tx| SEQ
+    SEQ --> EXEC
+    EXEC -->|"batch + validity"| ROLLUP
 
-### Challenges of C++ work in a Rust world?
+    style ROLLUP stroke-dasharray: 5 5
+```
 
-There are quite a few challenges especially with the provided gcc toolkit on a limited `rv32im` target. We have ironed out most of them. It's not easy though as there is a "first-mover" advantage of some of the prover libraries initially being written in Rust.\
-Having said that, RUST ↔ CPP bridge has zero bottlenecks and works perfectly within Zilkworm.
+In principle the validation of the raw batch of transactions happens on a “side-chain” by a process outside of L1 transaction validation itself. But the proof of validity of these L2 transactions are then put back into L1 in batches using two popular methods:
 
-### Do you have it integrated in Erigon?
+1. Optimistic L2 block inclusion aided by fraud proofs\
+   Essentially the validators apply a sequenced batch of transactions and the verifiers have a certain “challenge period” during which they observe these transactions and can submit a fraud proof if there is a discrepancy.
+2. Zero-knowledge proofs of L2 batches/blocks verified on L1\
+   A certain entity would process a batch of transaction using a ZKP circuit and generate a proof of transaction batch that then gets posted to and verified by a smart contract on L1.
 
-We have plans for this integration in two ways
+Of course there are many variations in the two, and even some others. In this article, we will dive into how we could use Zilkworm in an L2 like Arbitrum for a better user experience with the rollup mechanism.
 
-* As a replacement for the current Erigon core for faster performance on x86 and ARM hardware
-* As a prover through JSON-RPC integration
+### Example of Arbitrum
 
-We will publish such plans in a later iteration of Zilkworm
+As the most popular L2 at the moment, Arbitrum sequences a huge number of transactions and submits checkpoints to L1. Given the gigantic volume of transactions, the sequencer needs to be powerful and low-latency, and somewhat centralized in practice.\
+\
+The pros roughly are that users have a good experience with low-gas prices, and the security isn’t too far off that of mainnet. A con of this approach is that users have to wait for a challenge period before they are allowed to withdraw their assets out of the chain (back to Ethereum L1). Further, if the sequencer(s) are somewhat centralized or local to a region, it could censor certain users or geographies.\
+\
+If, however, sequencers don’t submit bad blocks, then fraud proofs are a rare occurrence and all goes well most of the time. But, that only applies to a chain as big and articulated as Arbitrum that has another leg of guarantee - reputation costs upon submitting invalid transactions through the sequencers.
 
-### Can I use Zilkworm with another Execution Layer (EL) client like Nethermind or Besu?
+### How would a z(il)k-Rollup work here
 
-Yes, the integration into other clients for prover would be the same way - over RPC. But in order to use the core directly as an executor, it would need closer collaboration with these other EL clients.
+```mermaid
+flowchart LR
+    SEQ["Sequencer<br/>(Arbitrum)"]
+    PV["Prover-validator<br/>+ Zilkworm"]
+    subgraph L1["Ethereum L1"]
+        OPT["Optimistic<br/>inclusion"]
+        VER["SNARK-verifier<br/>contract"]
+    end
 
-### Prover Killer Performance
+    SEQ -->|batch| OPT
+    SEQ -->|transactions| PV
+    PV -->|"SNARK proof"| VER
+    VER -.->|"finalize / reject"| OPT
 
-For the proof generation itself the performance of intensive crypto operation would be dictated by the underlying prover backend (for instance SP1 or RISC0 or something else). We will publish more results on it in future.
+    style OPT stroke-dasharray: 2 3
+```
 
-### Plans for integration with other zkVMs/Prover backends
+The core of Arbitrum is almost the same as that of Ethereum - they both use EVM! That means the same Zilkworm core we discuss can be used to process Arbitrum transactions as well, with minor changes to the logic. Essentially, an Arbitrum sequencer (can be decentralized) will submit a batch of transactions on a previous block or L1 checkpoint. This gets “optimistically” included right away to subvert bad UX. But soon enough another “prover-validator” runs the batch of transactions to generate a succinct proof with Zilkworm and submits it to an L1 SNARK-verifier contract.\
+\
+Since a bad transaction could not be generated by the Zilkworm prover, or a bad proof would refuse to verify, the L1 verification would not go through, and L2 would then mark it as a bad block.\
+On the up side, the security now is truly L1-level once the proof verification is done - no wait for the challenge period!
 
-The first rollout will have SP1 as the prover. We will rollout with others in due course of time.
+### The tech checklist
+
+With a team of capable C++ engineers, one could easily adapt Zilkworm for a specific use case (or contact us to get it done). The following would typically be in this journey to the final deliverable:
+
+* Identify compatibility variance with Ethereum mainnet
+* Identify performance requirements and run Zilkworm benchmarks to know the numbers and hardware resources required for proving
+* Fork the Zilkworm repo for unofficial variant adapted to the specific changes. The EVM and the state transition bits may need to be changed to fit in a chain such as, say, Arbitrum
+* Run protocol execution tests for that protocol - similar to Ethereum/tests or EESTs to check correctness and performance for individual opcodes/contracts etc.
+* Prove the chain!
+
+## High-level considerations
+
+### The performance considerations of ZK proving
+
+A big disadvantage of zero-knowledge proofs is their computational intensity. Even until a few years ago, mainstream ZK proofs were thought to be outside of consumer hardware, but that's not the case anymore. In fact Zilkworm can typically generate an Ethereum block proof with 30M gas in under 3 minutes with a standard consumer GPU.\
+\
+This is thanks to a lot of performance optimizations and parallelization of the zkVM provers. At the time of writing this Zilkworm mainly uses SP1 Prover that is capable of accelerating proofs with GPU. Some alternatives like Brevis Pico can even prove a typical mainnet block in under 10 seconds thanks to massive parallelization over say a dozen NVIDIA RTX 5090s.
+
+Another consideration is the long release iteration cycle and developer time it used to take a few years ago to hand-craft circuits. Thanks to most zkVMs now turning to general purpose minimalistic ISAs like RISC-V, any generic C++ or Rust program could be proved.\
+\
+This allows Zilkworm to take advantage of the C++ compilers and Rust tooling integration around RISC-V to deliver a robust end-to-end block and transaction prover.
+
+### Decentralization Argument
+
+For "big" batches of transactions, decentralization could be detrimental to the UX. But, decentralization is a de-facto requirement of blockchains for all the reasons of avoiding single point of failure and censorship.
+
+Essentially, a proof can be a direct replacement of the re-execution or dependence of secondary mechanisms like fraud proofs. A validator just needs to download a proof (&lt; 100KB) verify it and voila, the head of your rollup chain is canonical. So a validator in this case doesn't need to be massively compute capable.
+
+The other argument against decentralization like this is that an apex org or foundation-controlled sequencer makes money on the transactions that help secure that L2, if the sequencers don't have to compete with external players. This, however, can still be maintained with a zk-proofs-based validity mode, if the provers are only the ones that are designated to organise the flow of fees. E.g. a prover could make 1000x the "fees" money than a permissionless set of validators.
+
+The risks due to censorships and network downtime far outweigh the arguments against zk-proofs based decentralized consensus
+
+### The potential L3 "fraud" amplification
+
+For an optimistic rollup such as Arbitrum, there is a certain "wait-period" before assets from a child chain can be withdrawn to the parent chain. This is typically 7 days or something around that. It ensures that there is at least 1 honest validator out there that has enough time to check a block and verify it's not bad.
+
+But from the perspective of the code that's running the protocol, "optimism" means nothing here, as for any state change to happen from a child -> parent messaging, the wait time has to be respected. It is therefore a constant amount of time before it can happen.
+
+Naturally, the questions is, how about an L3, which is an optimistic chain on top of another optimistic chain? Well, that must have an additional (compounded) 7 day waiting period as well. And now the logistics are extremely complicated upon submission of a successful fraud proof on the L2 (the parent of the L3 in question).
+
+Suppose Block L3\_N is where a massive transaction takes place on L3. After 7 days many transactions take place on L3 and L2, but the L3\_N is now finalized on L2, and a transfer from L3 to L2 can happen on block L2\_N. The transfer is deemed successful, but after 7 days someone submits a fraud proof reverting L2\_N and therefore L3\_N and all blocks for the next 14 days on L3!\
+\
+The ecosystem would be in a mayhem in this "worst-case" scenario. But, on average, this is a very rare occurrence. Of course, it's not hard to guess that a ZK-proof submitted for L3\_N and L2\_N would have finalized it instantly on L1 and it would NEVER come to this.
+
+### Conclusion
+
+The gap for security in rollups can be filled by an easy to use proving mechanism for full block state transition. Although optimistic rollups have leg up in performance, zkVM implementations have caught up and Zilkworm can deliver the missing piece for an EVM-based L2/L3 chain to enable a zk-based rollup.
 
 ---
-# Getting Started
+# CLI reference
 
-Source: https://zilkworm.erigon.tech/documentation/getting-started/getting-started
+Source: https://zilkworm.erigon.tech/documentation/getting-started/cli-reference
 
-_Run the Zilkworm prover via the pre-built Docker image — setup, block fetch, dry-run execute, prove, and CUDA acceleration._
+_CLI Reference_
 
-### How to Run
+# CLI reference
 
-At the moment the building from source requires elaborate setup with Conan, Linux packages and SP1 Turbo SDK pre-requisites. It's recommended to use the pre-built Docker image.
+Complete reference for the `z6m_prover` binary — every flag, subcommand, default, and known quirk. The binary ships in the `somnergy/z6m_prover` docker image, or builds from source with `make z6m_prover` (landing at `prover/target/release/z6m_prover`); see [Running the prover](running-the-prover.md) for setup and workflows. This page is the dry list.
 
-To run with pre-built Docker
-
-```bash
-$ docker run somnergy/z6m_prover --help
-```
-
-```text
-Usage: z6m_prover [OPTIONS] [COMMAND]
-
-Commands:
-  setup    Run setup to generate proving and verifying keys
-  fetch    Fetch block and witness from RPC
-  execute  Execute the guest program without proving
-  prove    Generate a proof for a block
-  verify   Verify a proof using a verification key
-  help     Print this message or the help of the given subcommand(s)
-
-Options:
-      --service                                      
-      --rpc-url <RPC_URL>                            
-      --data-dir <DATA_DIR>                          [default: temp]
-      --save-all-responses                           
-      --prove-every <PROVE_EVERY>                    
-      --execute-every <EXECUTE_EVERY>                
-      --post-every <POST_EVERY>                      
-      --start-block <START_BLOCK>                    
-      --end-block <END_BLOCK>                        
-      --pk-path <PK_PATH>                            [default: pk.bin]
-      --proof-type <PROOF_TYPE>                      [default: compressed]
-      --ethproofs-endpoint <ETHPROOFS_ENDPOINT>      
-      --ethproofs-token <ETHPROOFS_TOKEN>            
-      --ethproofs-cluster-id <ETHPROOFS_CLUSTER_ID>  
-  -h, --help  
-```
-
-#### First Fetch the block
-
-```text
-Usage: z6m_prover fetch [OPTIONS]
-
-Options:
-      --rpc-url <RPC_URL>            RPC endpoint URL
-      --block-number <BLOCK_NUMBER>  Block number to fetch
-      --data-dir <DATA_DIR>          Output directory
-      --save-all-responses           Whether to save all the json files to disk after download
-      --build-eth-test               Whether to create an ethereum/tests format json file too
-  -h, --help                         Print help
-
-```
-
-#### Dry run execute - just use --block-number for this
-
-```text
-Usage: z6m_prover execute [OPTIONS]
-
-Options:
-      --block-number <BLOCK_NUMBER>  Block number to execute [default: 0]
-      --file-name <FILE_NAME>        Whether the input file is an Ethereum/tests file
-      --is-test                      
-      --data-dir <DATA_DIR>          Data directory
-  -h, --help                         Print help
-
-```
-
-#### Fire up the prover
-
-```text
-Usage: z6m_prover prove [OPTIONS]
-Options:
-      --block-number <BLOCK_NUMBER>  JSON file to load ethereum/tests format test from [default: 0]
-      --file-name <FILE_NAME>        Whether the input file is an Ethereum/tests file
-      --is-test                      
-      --data-dir <DATA_DIR>          Data directory
-      --pk-path <PK_PATH>            Proving key path [default: pk.bin]
-      --proof-path <PROOF_PATH>      Proof output path
-      --proof-type <PROOF_TYPE>      Proof type: core, compressed, groth16, plonk [default: compressed]
-  -h, --help                         Print help
-
-```
-
-### NVIDIA CUDA Accelerated proving
-
-First make sure to install NVIDIA drivers and the NVIDIA Container Toolkit https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+There are three invocation forms:
 
 ```bash
-$ user@machine-with-gpu
-docker run --gpus all --rm --network host -v "$PWD:/work:rw" -v /var/run/docker.sock:/var/run/docker.sock  -w /work -it --entrypoint bash somnergy/z6m_prover
-
-root@instance-20250919-091229:/work# 
-SP1_PROVER=cuda RUST_BACKTRACE=full RUST_LOG=info z6m_prover prove --n 1 --file-name test.json
+z6m_prover --service [flags]         # continuous fetch/execute/prove loop
+z6m_prover --test-service [flags]    # offline execution of downloaded blocks or EEST fixtures
+z6m_prover <subcommand> [flags]      # one-shot: fetch | execute | prove | setup | verify
 ```
+
+Running with no mode and no subcommand exits with an error. A `.env` file in the working directory is loaded automatically at startup, so environment variables such as `SP1_PROVER` can live there (see [Environment variables](#environment-variables)).
+
+## Top-level flags
+
+These flags precede any subcommand. Most only have an effect in `--service` or `--test-service` mode; the mode column says which.
+
+### Mode selection
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--service` | bool | off | Run the continuous prover service. Requires `--rpc-url`. Processes blocks from `--start-block` (default: chain head + 1) onward, fetching block + witness and proving/executing per the interval flags. |
+| `--test-service` | bool | off | Offline test mode; conflicts with `--service` and cannot be combined with a subcommand. With `--test-dir`, executes EEST fixtures from that directory; otherwise requires `--start-block` and `--end-block` and executes already-downloaded bundles from `--data-dir`. No RPC access, no proving, CPU execution only. |
+
+### Block range and intervals (service modes)
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--start-block` | integer | chain head + 1 | First block to process. Required by `--test-service` unless `--test-dir` is given. |
+| `--end-block` | integer | follow chain head | Last block to process, **inclusive**; the service exits after it (after draining in-flight work). Without it the service polls the RPC head and runs until stopped. |
+| `--prove-every` | integer | unset | Prove blocks whose number is divisible by N. 0 or unset means never. Service mode only. |
+| `--execute-every` | integer | unset | Execute (without proving) blocks whose number is divisible by N. 0 or unset means never; skipped for blocks that also match `--prove-every`. In `--test-service` without `--test-dir` it defaults to 1 (every block) and 0 is rejected. |
+| `--download-only` | bool | off | Service mode: fetch block + witness bundles only, skipping proving and executing. Takes precedence over `--prove-every` and `--execute-every`. |
+| `--save-all-responses` | bool | off | Also save the raw RPC JSON (`block<N>.json`, `blockRlp<N>.json`, `executionWitness<N>.json`) next to each block's flat bundle. In service mode this additionally fetches blocks that match no prove/execute interval (which are otherwise skipped entirely, not even fetched). |
+
+### Inputs and outputs
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--rpc-url` | string | — | Ethereum JSON-RPC endpoint; must expose `debug_getRawBlock` and `debug_executionWitness`. Required by `--service`; also serves as the fallback for the `fetch` subcommand's own `--rpc-url`. |
+| `--data-dir` | path | `temp` | Root data directory (e.g. `/mnt/data`, not `/mnt/data/blocks`). Block artifacts go to `<data-dir>/blocks/<N>/`; execution and proving logs are appended at the root. |
+| `--proof-type` | string | `compressed` | Proof mode for **service-mode** proving: `core`, `compressed`, `groth16` or `plonk`. Unknown values silently fall back to `compressed`. The `prove` subcommand accepts but ignores it (see below). |
+| `--test-dir` | path | — | Directory of EEST fixtures for `--test-service`, scanned recursively for `.mfbd`/`.json` files. |
+| `--max-file-size` | integer | `20971520` | Skip EEST test files larger than this many bytes (20 MiB); 0 means no limit. Used only by `--test-service --test-dir`. |
+| `--execution-log-file` | path | `executionLogs.log` in `--data-dir` or `--test-dir` | Execution log path. Only honored by `--test-service`; the live service and the `execute` subcommand always append to `<data-dir>/executionLogs.log`. |
+
+### Ethproofs reporting (service mode)
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--ethproofs-endpoint` | string | — | Ethproofs API base URL. |
+| `--ethproofs-token` | string | — | Ethproofs API token. |
+| `--ethproofs-cluster-id` | integer | — | Cluster id to report under. |
+
+All three must be set together — a partial set is **silently ignored** (no warning, reporting stays off). Posting happens only in the `--service` loop; the `prove` subcommand builds the same configuration but never posts. See [Ethproofs prover](ethproofs-prover.md) for the posting lifecycle.
+
+### Inert flags
+
+Accepted, parsed, and currently doing nothing:
+
+| Flag | Type | Default | Status |
+|------|------|---------|--------|
+| `--post-every` | integer | unset | Reserved posting interval; computed in the service loop but never acted on. |
+| `--pk-path` | path | `pk.bin` | Proving key path; unused — the proving key is generated in-process at startup. |
+
+## Subcommands
+
+### fetch
+
+Fetch a block and its witness over RPC and write the flat bundle to `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`.
+
+```bash
+z6m_prover fetch --rpc-url <url> [--block-number <N>] [--data-dir <dir>] [--save-all-responses] [--geth]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--rpc-url` | string | top-level `--rpc-url` | RPC endpoint URL. Required (here or top-level). |
+| `--block-number` | integer | latest | Block to fetch; unset or 0 means the latest chain head. |
+| `--data-dir` | path | top-level `--data-dir` | Output root directory. |
+| `--save-all-responses` | bool | off | Also save the raw RPC JSON next to the bundle (ORed with the top-level flag). |
+| `--geth` | bool | off | Use geth's `debug_executionWitness` format instead of reth/alloy. |
+
+On success prints `Fetched block <N> into <dir>`. Notes:
+
+- `fetch` reuses a cached bundle if one already exists on disk; service mode force-rebuilds on every block.
+- `--geth` exists **only here**. Service mode always fetches in reth/alloy format — there is no way to run the service against a geth node's witness format.
+
+### execute
+
+Execute the guest program for one block in the zkVM without proving. Always runs on the CPU executor, regardless of `SP1_PROVER`.
+
+```bash
+z6m_prover execute --block-number <N> [--data-dir <dir>] [--file-name <path>] [--is-test]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--block-number` | integer | 0 | Block to execute; input read from `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd` (or `ethTests<N>.json` with `--is-test`). Required (> 0) unless `--file-name` is set. |
+| `--file-name` | path | — | Explicit input file path, overriding block-number resolution. |
+| `--is-test` | bool | off | Treat the input as an ethereum/tests JSON fixture instead of an `.mfbd` bundle. |
+| `--data-dir` | path | top-level `--data-dir` | Root data directory. |
+
+Success prints `Executed block <N> (gas_used=..., cycles=..., prover_gas=..., syscall_count=...)` and appends a line to `<data-dir>/executionLogs.log`. Failure (`gas_used=0`) prints `FAILED block ...` and exits with status 1.
+
+### prove
+
+Generate a proof for one block.
+
+```bash
+z6m_prover prove --block-number <N> [--data-dir <dir>] [--file-name <path>] [--is-test]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--block-number` | integer | 0 | Block to prove; same input resolution as `execute`. Required (> 0) unless `--file-name` is set. |
+| `--file-name` | path | — | Explicit input file path. |
+| `--is-test` | bool | off | Treat the input as an ethereum/tests JSON fixture. |
+| `--data-dir` | path | top-level `--data-dir` | Root data directory. |
+| `--pk-path` | path | `pk.bin` | **Inert.** The key is generated in-process. |
+| `--proof-path` | path | — | **Inert.** See below. |
+| `--proof-type` | string | `compressed` | **Inert here.** Honored only by service-mode proving. |
+
+Known quirks of the current implementation — verify against your build if these matter to you:
+
+- The proof is generated in **compressed** mode via the **CUDA** prover, unconditionally. `--proof-type` and `SP1_PROVER` are both ignored by this subcommand. A key-setup failure (e.g. no CUDA proving server) prints an error but still exits 0, and a proving failure is discarded silently — the exit status does not reflect whether proving succeeded.
+- The proof stays **in memory and is never written to disk**. `--proof-path` is accepted but unused, and the closing summary line reports placeholder values (`gas_used=0`, empty proof path). Use service mode for persisted proofs.
+- Ethproofs flags are accepted and validated on this path, but no posting ever happens outside `--service`.
+
+### setup
+
+```bash
+z6m_prover setup [--pk-path pk.bin] [--vk-path vk.bin]
+```
+
+Currently a **no-op**: the handler body is commented out and nothing is written. Keys are generated in-process whenever proving starts.
+
+### verify
+
+```bash
+z6m_prover verify [--proof-path proof.bin] [--vk-path vk.bin]
+```
+
+Currently a **no-op**: the handler body is commented out and no verification runs.
+
+## Environment variables
+
+`dotenv` runs at startup, so all of these can be placed in a `.env` file in the working directory (see `.env.example` in the repo root).
+
+| Variable | Effect |
+|----------|--------|
+| `SP1_PROVER` | Selects the proving backend for **service-mode** proving. Only the value `cuda` is special-cased (builds the local GPU prover via `sp1-gpu-server`); **any** other value — `mock`, `cpu`, `network`, or unset — yields the in-process CPU prover. The `mock` and `network` modes listed in `.env.example` are not currently wired up (the SDK's `from_env` client is disabled in code). Ignored by `execute` (always CPU) and by the one-shot `prove` (always CUDA). |
+| `NETWORK_PRIVATE_KEY` | Listed in `.env.example` for the Succinct Prover Network; inert while `network` mode is not wired up. |
+| `RUST_LOG` | Standard tracing filter for log verbosity; defaults to `warn` when unset. |
+
+The Ethproofs settings are flags only — there are no `ETHPROOFS_*` environment variables read by the binary.
+
+## Where to go next
+
+- [Quickstart: Hypercube prover](quickstart-hypercube.md) — the fast path to a first proof.
+- [Running the prover](running-the-prover.md) — service mode in depth, Docker and source builds, `SP1_PROVER` modes.
+- [Ethproofs prover](ethproofs-prover.md) — cluster registration and the posting lifecycle.
+
+---
+# Ethproofs prover
+
+Source: https://zilkworm.erigon.tech/documentation/getting-started/ethproofs-prover
+
+_This page covers only the Ethproofs integration through the service mode_
+
+# Ethproofs prover
+
+[Ethproofs](https://ethproofs.org) is a public registry and leaderboard of real-time Ethereum mainnet block proofs. Provers register a *cluster* (a named proving setup with its hardware and cost profile), then report each proof's lifecycle — queued, proving, proved — through the Ethproofs API, along with the proof itself, its cycle count, and proving time. Zilkworm's service mode has this reporting built in: three flags turn a normal proving service into an Ethproofs-posting one, with no change to how blocks are fetched or proved.
+
+This page covers only the Ethproofs integration through the service mode.
+
+## Prerequisites
+
+- A working proving setup, i.e. everything from [Running the prover](running-the-prover.md): an RPC node with the debug namespace, NVIDIA GPU, and a service-mode run that produces proofs locally.
+- An Ethproofs account with a **registered cluster**. We need three things for posting proofs to EthProofs
+  - the API endpoint (production is `https://ethproofs.org/api/v0`),
+  - an API token,
+  - a numeric cluster id.
+
+## Service Options
+
+Three top-level flags for `z6m_prover` control reporting:
+
+| Flag | Type | Meaning |
+|------|------|---------|
+| `--ethproofs-endpoint` | string | Ethproofs API base URL; paths like `/proofs/queued` are appended to it |
+| `--ethproofs-token` | string | API token, sent as `Authorization: Bearer <token>` |
+| `--ethproofs-cluster-id` | integer | Cluster id to report under on EthProofs page |
+
+Behavior to be aware of:
+
+- **All three or nothing.** Reporting is enabled only when endpoint, token, and cluster id are all set
+- **Service mode only.** Posting happens in the `--service` loop. The one-shot `prove` doesn't post to EthProofs.
+- **No environment variables.** The service flags for EthProofs are not captured through environment, such as a `.env` file.
+
+## Running with Ethproofs posting
+
+Ethproofs expects clusters to prove blocks with a deterministic frequency with which the "cluster" was registered. `--prove-every 100` proves every block whose number is divisible by 100, which is the usual cadence.
+
+Bare binary (source build, from the repo root):
+
+```bash
+export ETHPROOFS_ENDPOINT=https://ethproofs.org/api/v0
+export ETHPROOFS_TOKEN=<api-token>
+export ETHPROOFS_CLUSTER_ID=<cluster-id>
+
+SP1_PROVER=cuda prover/target/release/z6m_prover --service \
+  --rpc-url "$RPC_URL" \
+  --data-dir /mnt/data \
+  --prove-every 100 \
+  --ethproofs-endpoint "$ETHPROOFS_ENDPOINT" \
+  --ethproofs-token "$ETHPROOFS_TOKEN" \
+  --ethproofs-cluster-id "$ETHPROOFS_CLUSTER_ID"
+```
+
+Docker equivalent:
+
+```bash
+docker run --rm --gpus all --network host \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$PWD:/work" \
+  -e SP1_PROVER=cuda \
+  somnergy/z6m_prover:latest \
+  --service \
+  --rpc-url "$RPC_URL" \
+  --data-dir /work/data \
+  --prove-every 100 \
+  --ethproofs-endpoint "$ETHPROOFS_ENDPOINT" \
+  --ethproofs-token "$ETHPROOFS_TOKEN" \
+  --ethproofs-cluster-id "$ETHPROOFS_CLUSTER_ID"
+```
+
+Proofs still land in `<data-dir>/<N>/proof<N>.bin`, one line per proof in `<data-dir>/provingLogs.log`, and Ethproofs posting happens alongside.
+
+## The EthProofs posting lifecycle
+
+For each block matching `--prove-every`, the service makes three API calls, mirroring Ethproofs' proof states:
+
+1. **`POST <endpoint>/proofs/queued`** — sent once the block's witness has been fetched, *before* waiting for the prover to become free. Payload: `block_number` and `cluster_id`. On a busy prover a block can therefore sit in "queued" on your cluster page while the previous proof finishes.
+2. **`POST <endpoint>/proofs/proving`** — sent once the prover is acquired and proving is about to start. Same payload as `queued`.
+3. **`POST <endpoint>/proofs/proved`** — sent after a successful proof. Payload:
+
+| Field | Content |
+|-------|---------|
+| `proof` | The serialized proof file (`proof<N>.bin`, bincode-encoded), base64-encoded |
+| `block_number` | Block number |
+| `proving_cycles` | Cycle count reported by the prover |
+| `proving_time` | Wall-clock proving time in milliseconds |
+| `verifier_id` | The SP1 verifying key's `bytes32` hash, identifying the guest program version |
+| `cluster_id` | Your cluster id |
+
+All three calls send `Content-Type: application/json` and `Authorization: Bearer <token>`, with a 30-second HTTP timeout.
+
+**Posting never blocks proving.** Each call is fired on a detached background task; the proving loop moves on immediately. A failed post is dropped — a network error is logged as an error, while an HTTP error response (e.g. a bad token) is only echoed with its status — and there are **no retries and no re-posting**. The proof itself is unaffected: it is still written to disk and logged in `provingLogs.log`, but that block will be missing (or stuck in queued/proving) on your cluster page. Likewise, if proving fails or hits the 30-minute timeout, no `proved` call follows the earlier `queued`/`proving` ones.
+
+Each request and response is also printed to the service's stdout for debugging.
+Once posting works, proofs appear on your cluster's page on ethproofs.org, with proving time and cycles alongside other clusters proving the same blocks.
+
+## Where to go next
+
+- [Running the prover](running-the-prover.md) — service mode in depth, proof types, Docker and source builds.
+- [Quickstart: Hypercube prover](quickstart-hypercube.md) — the condensed end-to-end path, including a minimal Ethproofs run.
+- [CLI reference](cli-reference.md) — every flag and subcommand.
 
 ---
 # How it works
@@ -233,29 +541,268 @@ Rather than reinvent EVM semantics, Zilkworm embeds EVMone. The tracing code doe
 Cryptographic operations are heavy, and the RV32IM guest has no business carrying entire big-number libraries if it can avoid it. For those, Zilkworm issues an ECALL with a service id that names the primitive (for example, a Keccak permutation or a BN254 group operation). Arguments are passed as pointers and lengths into guest memory. This pattern keeps the guest compact and also keeps the trace witness small. If the backend knows the primitive, it can treat the event as a constraint.
 
 ---
-# Introduction
+# Quickstart: Hypercube prover
 
-Source: https://zilkworm.erigon.tech/documentation/getting-started/introduction
+Source: https://zilkworm.erigon.tech/documentation/getting-started/quickstart-hypercube
 
-_Zilkworm is an evolution of Erigon's C++ Silkworm client focused on zero-knowledge proofs — a RISC-V-targeted core that proves full Ethereum block state transitions._
+_This guide walks you through running proofs for mainnet Ethereum blocks with the SP1 Hypercube prover. Hypercube is deeply integrated within zilkworm to run efficiently. Zilkworm's compiled guest is hosted and run through the Hypercube zkVM with the service command. Optionally, the service provides direct Ethproofs integration. This example guide uses the pre-built docker image._
 
-### The Naming
+# Quickstart: Hypercube prover
+This guide walks you through running proofs for mainnet Ethereum blocks with the SP1 Hypercube prover. Hypercube is deeply integrated within zilkworm to run efficiently. Zilkworm's compiled guest is hosted and run through the Hypercube zkVM with the service command. Optionally, the service provides direct Ethproofs integration. This example guide uses the pre-built docker image.
 
-Zilkworm is an evolution of Silkworm Ethereum Client implementation by Erigon team in C++. This is one focused on zero-knowledge proof systems that use a RISC-V backend. The existing EVMone implementation is re-used, with tweaks targeted towards the prover SDK (such as Succinct SP1). While Silkworm was more focused on RPCs, full scale integration with Erigon and features of full database layer, Zilkworm is more focused on the core that runs state\_transition of blocks, such as the EVM, signature validation and Merkle Patricia Trie.
+## Prerequisites
 
-### The Driver
+- Docker.
+- An Ethereum RPC endpoint exposing `debug_getRawBlock` and `debug_executionWitness` (a Reth or Geth node with the debug namespace enabled). Add `--geth` to `fetch` when the node is Geth; the default expects the Reth/alloy witness format.
+- For GPU-accelerated proving: an NVIDIA GPU with drivers and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
-The driving inspiration for ZK proofs of full block state transition is aligned with Ethereum's overall vision to scale the L1, focus on privacy and embrace a new RISC-V paradigm.
+## 1. Get the pre-built docker image
 
-Of course, fulfilling these objectives together is a massive engineering challenge. It's a great time right now to be targeting RISC-V based provers which have shown promise in the recent years. Now it needs much push and optimization from the protocol side of things, including a well thought out client core implementation itself.
+The docker image ships the prover binary, the RISC-V guest ELF, and the CUDA proving server.
+```bash
+docker pull somnergy/z6m_prover:latest
+```
 
-Full Ethereum block proofs further open innovations for Layer-2 chains with possibilities of faster finality and fast 2-way interactions. Typically this was not thought to be possible earlier because of the economics of the proving itself.
+## 2. Test the setup: Fetch and execute a block
+Let's first execute a block downloaded through the RPC without using a GPU.
 
-### The Objective
+```bash
+export RPC_URL=http://localhost:8545   # must expose the two debug_ methods
 
-After initial successes in being able to prove full Ethereum blocks, we aim to further investigate opportunities of tuning the system to achieve close to real time proving from a home computer with one or two GPUs.
+docker run --rm --network host -v "$PWD:/work" somnergy/z6m_prover \
+  fetch --rpc-url "$RPC_URL" --block-number 23100000 --data-dir /work/data
+```
+This writes the flat witness bundle to `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`.
+**Notes**
+- `--network host` is only needed when the RPC node listens on the host's localhost.
+- Omit `--block-number` to fetch the latest block; add `--geth` for a Geth node.
 
-To that end Zilkworm's objective would be to enhance and optimize its core and provide an end to end solution for creating economic full type-1 EVM chain block proofs.
+Execute the block inside the zkVM without proving:
+```bash
+docker run --rm -v "$PWD:/work" somnergy/z6m_prover \
+  execute --block-number 23100000 --data-dir /work/data
+```
+That should print
+```
+Executed block 23100000 (gas_used=..., cycles=..., prover_gas=..., syscall_count=...)
+```
+A non-zero `gas_used` means the block executed and verified correctly; failures print `FAILED block ...` instead. Results append to `<data-dir>/executionLogs.log`.
+
+## 3. GPU-accelerated proving
+Currently the default SP1 Hypercube prover supports only a **single GPU** — a limitation zilkworm cannot work around. Multi-GPU proving exists in Succinct's sp1-cluster, but it is beyond the scope of this guide.
+```bash
+docker run --rm --gpus all --network host \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$PWD:/work" \
+  -e SP1_PROVER=cuda \
+  somnergy/z6m_prover:latest \
+  prove --block-number 23100000 --data-dir /work/data
+```
+
+The proof is generated as a compressed proof and currently stays in memory — `prove` does not write it to disk. Use service mode (next section) for persisted proofs.
+
+## 4. Continuous proving with Ethproofs
+
+Service mode follows the chain head, fetching and proving each block whose number is divisible by `--prove-every N`; other blocks are skipped entirely (add `--save-all-responses` to fetch every block). Ethproofs reporting activates only when all three `--ethproofs-*` flags are set; the service then posts queued, proving, and proved updates for every proven block. Registering a cluster with [Ethproofs](https://ethproofs.org) gets you the endpoint, API token, and cluster id.
+
+```bash
+export ETHPROOFS_ENDPOINT=<endpoint>       # from your Ethproofs cluster registration
+export ETHPROOFS_TOKEN=<api-token>
+export ETHPROOFS_CLUSTER_ID=<cluster-id>
+
+docker run --rm --gpus all --network host \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$PWD:/work" \
+  -e SP1_PROVER=cuda \
+  somnergy/z6m_prover:latest \
+  --service \
+  --rpc-url "$RPC_URL" \
+  --data-dir /work/data \
+  --prove-every 100 \
+  --ethproofs-endpoint "$ETHPROOFS_ENDPOINT" \
+  --ethproofs-token "$ETHPROOFS_TOKEN" \
+  --ethproofs-cluster-id "$ETHPROOFS_CLUSTER_ID"
+```
+
+Each proof is written to `<data-dir>/<N>/proof<N>.bin` and logged in `<data-dir>/provingLogs.log`. Omit the `--ethproofs-*` flags to prove without reporting. Without `--start-block` the service begins at chain head + 1; without `--end-block` it runs until stopped.
+
+## Where to go next
+
+- [Running the prover](running-the-prover.md) — the full guide: `SP1_PROVER` modes, proof types, service mode in depth, building from source.
+- [Ethproofs prover](ethproofs-prover.md) — cluster setup, posting flow, operational monitoring.
+- [CLI reference](cli-reference.md) — every flag and subcommand.
+
+---
+# Running The Prover Service
+
+Source: https://zilkworm.erigon.tech/documentation/getting-started/running-the-prover
+
+_This page describes how to use these features through various commands and subcommands._
+
+# Running The Prover Service
+
+Alongside the guest program, Zilkworm ships with a `z6m_prover` binary that encapsulates the underlying zkVM and other interface services required to drive block proving. The functionalities provided by the binary include: fetching block and witness from RPC, converting witness JSON to MFBD format for the guest, raw execution inside of the zkVM, end-to-end proving in the zkVM with its GPU prover library, and integration with Ethproofs. This page describes how to use these features through various commands and subcommands.
+
+## Prerequisites
+**RPC node.** A node running Erigon or Reth (initial support for Geth also with `--geth` flag) that exposes the `debug_` namespace without restrictions. This is necessary for `debug_getRawBlock` and `debug_executionWitness` calls that the service relies on.
+
+**NVIDIA GPU.** Currently only the CUDA stack is supported by the integrated zkVMs such as Succinct SP1 and ZKsync Airbender. For GPU proving, an NVIDIA GPU with a minimum 24GB VRAM is required. Further, the machine the prover is running on must have the latest NVIDIA drivers installed. For running within containers, the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) should be installed as well.
+
+**Software.** Either Docker (recommended, everything prebuilt) or the building toolchains (see [Running from source](#running-from-source)) are needed.
+
+## Service mode
+
+The binary built from source as well as the shipped docker image come with a continuous service facility that can fetch blocks and go on proving. This is invoked through the `--service` command-line option. It is required to use this with the `--rpc-url "$RPC_URL"` option. The RPC node should support the `debug_` namespace.
+A typical example of this would be:
+```bash
+z6m_prover --service --rpc-url "$RPC_URL" --data-dir /mnt/data \
+  --prove-every 10 --execute-every 1
+```
+
+This would poll the chain-head continuously from the RPC node, fetch each of the blocks and their witnesses. The emulated execution is run for every block, as specified by the `--execute-every` option, while proving is performed only every 10 blocks (block numbers that end with a "0").
+
+### Options overview
+A few things about how to provide the right options:
+- **Block range.** Without `--start-block` the service begins at chain head + 1; without `--end-block` it runs until stopped. `--end-block` is inclusive and the service exits after it.
+- **Intervals.** `--prove-every N` proves blocks whose number is divisible by N; `--execute-every N` does the same for execution, and is skipped when the block also matches the prove interval. 0 or unset means never.
+- **Skipping.** Blocks matching no interval are skipped entirely — not even fetched — unless `--save-all-responses` (fetch every block, saving raw JSON) or `--download-only` (fetch bundles only, overriding both intervals) is set.
+- **Proof types (for hypercube).** `--proof-type core|compressed|groth16|plonk` (default `compressed`); unknown values fall back to compressed. Honored by service-mode proving only.
+- **Back-pressure.** One proof at a time; each has a 30-minute timeout. Executions race a second, always-CPU client, so an execution can run while a proof is in flight; a second queued proof, however, blocks the loop (and any later executions) until the current proof finishes.
+- **Ethproofs.** Adding `--ethproofs-endpoint`, `--ethproofs-token`, and `--ethproofs-cluster-id` (all three required) makes the service post queued/proving/proved updates to [Ethproofs](https://ethproofs.org) — see [Ethproofs prover](ethproofs-prover.md).
+
+Outputs under `--data-dir`:
+
+| Path                                   | Content                                                  |
+| -------------------------------------- | -------------------------------------------------------- |
+| `blocks/<N>/flatWitnessBundle<N>.mfbd` | Fetched witness bundle                                   |
+| `<N>/proof<N>.bin`                     | Serialized proof (note: not under `blocks/`)             |
+| `executionLogs.log`                    | One line per executed block                              |
+| `provingLogs.log`                      | One line per proved block (proof path, type, proving_ms) |
+
+### Test-service mode
+There is a test mode in which the service would run off of pre-downloaded offline blocks. It can be invoked with `--test-service` (conflicts with `--service`). It does CPU execution only:
+
+```bash
+# Execute a range of already-downloaded bundles from <data-dir>/blocks/<N>/
+z6m_prover --test-service --data-dir /mnt/data \
+  --start-block 23100000 --end-block 23100100 --execute-every 1
+
+# Or run EEST fixtures, scanned recursively for .mfbd/.json files
+z6m_prover --test-service --test-dir fixtures/
+```
+
+Without `--test-dir`, `--start-block` and `--end-block` are required and `--execute-every` defaults to 1; missing blocks are skipped with a warning. With `--test-dir`, files larger than `--max-file-size` bytes (default 20 MiB) are skipped and a pass/fail summary is printed. `--execution-log-file` overrides the default log location.
+
+Two flags are currently inert everywhere: `--post-every` (reserved) and the top-level `--pk-path` (keys are generated in-process at startup).
+
+## Running via Docker (recommended)
+
+Pre-built docker images ship with all necessary binaries and libraries for the guest, zkVM and NVIDIA dependencies to run proving on a server with GPU. It is highly recommended to run these images for the proving service.
+
+```bash
+docker pull somnergy/z6m_prover:latest
+```
+
+CPU dry-run over a pre-fetched bundle after mounting your data directory at a stable path:
+
+```bash
+docker run --rm -v "$PWD:/work" somnergy/z6m_prover \
+  execute --block-number 23100000 --data-dir /work/data
+```
+
+Proving a block on GPU for a single block can be initiated as follows:
+```bash
+docker run --rm --gpus all --network host \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$PWD:/work" \
+  -e SP1_PROVER=cuda \
+  somnergy/z6m_prover:latest \
+  prove --block-number 23100000 --data-dir /work/data
+```
+
+The docker image builds with `CUDA_ARCHS="89,90,100"` so it already bakes in support for the latest NVIDIA GPU architectures for SP1-GPU.
+To prove the blocks in a continuous fashion, you can use the `--service` mode as follows:
+
+```bash
+z6m_prover --service --rpc-url "$RPC_URL" --data-dir /mnt/data \
+  --prove-every 100 --execute-every 10 --proof-type compressed
+```
+
+### SP1_PROVER modes
+
+The prover reads `SP1_PROVER` from the environment; a `.env` file in the working directory is loaded automatically (see `.env.example`).
+
+| Mode      | Function                                                                                                               | When to use                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `mock`    | Mock proofs, no real cryptography                                                                                      | Wiring and integration tests |
+| `cpu`     | In-process CPU prover                                                                                                  | Dry-runs, slow real proofs   |
+| `cuda`    | Local GPU proving via `sp1-gpu-server`                                                                                 | Real proving (recommended)   |
+| `network` | [Succinct Prover Network](https://docs.succinct.xyz/docs/network/developers/key-setup); requires `NETWORK_PRIVATE_KEY` | Proving without local GPUs   |
+
+## Running from source
+
+Toolchain prerequisites (full detail in GitHub source at `prover/guest_hypercube/Instructions.md`):
+
+- `git submodule update --init --recursive`. EEST fixtures come via `make test-fixtures`, which downloads sha256-pinned tarballs into `test-fixtures-cache/` — they are not in Git LFS.
+- `protoc` (`sudo apt install protobuf-compiler`).
+- The SP1 Hypercube toolchain: install `cargo-prove` from source, then `cargo prove install-toolchain`.
+- The xpack RISC-V bare-metal GCC: `npm install -g xpm && xpm install @xpack-dev-tools/riscv-none-elf-gcc@latest --global`.
+- The prebuilt standard libraries: download `prelibs64.tar.xz` from the repo's `prelibs` release and extract it into `prover/`.
+- For CUDA proving: `sp1-gpu-server` built from `sp1-gpu/crates/server/` in the `erigontech/sp1` repository.
+
+Build the guest ELF and the host binary (the `z6m_prover` target builds both):
+
+```bash
+make z6m_prover        # cross-compiles the C++ guest, then builds the Rust host
+```
+
+The binary lands at `prover/target/release/z6m_prover`. To fetch blocks you also need the native C++ witness converter, which the fetcher expects at `build/zilk_core/dev/cli/json_witness_to_flat_bundle`:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target json_witness_to_flat_bundle
+```
+
+All subcommands below work identically with `prover/target/release/z6m_prover` in place of the `docker run` prefix.
+
+## One-shot workflow: fetch, execute, prove
+
+Fetch a block and write its flat witness bundle to `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`:
+
+```bash
+z6m_prover fetch --rpc-url "$RPC_URL" --block-number 23100000 --data-dir data
+```
+
+- Omit `--block-number` (or pass 0) to fetch the latest block.
+- `--geth` switches to Geth's witness format.
+- `--save-all-responses` also writes the raw RPC JSON (`block<N>.json`, `blockRlp<N>.json`, `executionWitness<N>.json`) next to the bundle.
+- `fetch` reuses an existing bundle if one is already on disk; service mode always rebuilds it.
+
+Execute the block in the zkVM without proving (CPU-only, no GPU needed):
+
+```bash
+z6m_prover execute --block-number 23100000 --data-dir data
+```
+
+Success prints `Executed block <N> (gas_used=..., cycles=..., prover_gas=..., syscall_count=...)`; failure prints `FAILED block ...` and exits non-zero. Results append to `<data-dir>/executionLogs.log`. Use `--file-name <path>` to point at an explicit bundle instead of resolving via `--data-dir`, and `--is-test` for an ethereum/tests JSON fixture.
+
+Prove the block:
+
+```bash
+z6m_prover prove --block-number 23100000 --data-dir data
+```
+
+Note that the one-shot `prove` currently keeps the proof in memory and does not write it to disk (`--proof-path` and `--proof-type` are accepted but ignored); use service mode for persisted proofs.
+
+## Airbender — coming soon
+
+Zilkworm is designed to target multiple RISC-V zkVMs, not just SP1 Hypercube. An integration with ZKsync's Airbender zkVM is under development; it does not exist in the repository tree yet. This section will be expanded when it lands.
+
+## Where to go next
+
+- [Quickstart: Hypercube prover](quickstart-hypercube.md) — the fast path to a first proof.
+- [Ethproofs prover](ethproofs-prover.md) — cluster registration, posting flow, operations.
+- [CLI reference](cli-reference.md) — every flag and subcommand.
 
 ---
 # Welcome
@@ -454,218 +1001,3 @@ If you’re doing performance-oriented execution work (as most clients do), this
 **5) Expensive code-paths on rv32im specifically**
 
 This is not a functional correctness bug, but it’s a practical consequence: RV32IM runs can expose instruction-count blowups where a path is acceptable on x86\_64 but becomes a performance cliff on a proving target. That matters because in ZK, slow execution often translates into quite expensive proving.
-
----
-# Ethereum Block Proofs
-
-Source: https://zilkworm.erigon.tech/documentation/use-cases/ethereum-block-proofs
-
-_Generate verifiable ZK proofs of full Ethereum mainnet block execution with Zilkworm — the foundational use case._
-
-Generating full state transition proofs for Ethereum mainnet was one of the first motivations for Zilkworm. This article explores Ethereum's ZK perspective and Zilkworm's contributions.
-
-### Scale through ZK Proofs
-
-The ongoing narrative is that once you have a STARK proof for a full block state transition, you can just verify and apply state root changes without having to download blocks and re-execute all transactions. As of today, network and hardware restrictions limit the block size to less than 100M gas (so, typically 60M gas is safe). And the limit can't be raised too high without affecting decentralization of validators.\
-\
-zkVMs have now ramped up performance and parallelization enough to have now been able to prove a whole block in less than 15 seconds. This means a relatively low-end hardware could run as a validator for massive blocks!
-
-### How the Validator now looks
-
-Post-merge Ethereum block progression would happen through a Consensus Layer (CL) and an Execution Layer (EL) client, together with a validator software that signs off on new blocks. The driver of this is the Consensus Layer that requests the EL to check if a new block is valid by asking it to download it or by providing the "payload" of a new block obtained from the p2p network. The EL upon receiving the payload/new block would execute the state transition function by running protocol checks and processing the transactions through the EVM.
-
-In the post ZKalyptic times the validator can simply attest new blocks "as they come" with proofs without needing either the CL or the EL. The CL still needs to find its way through any malicious blocks to find the canonical block and the EL is simply replaced by a database. That holds, if it is not a block-builder.
-
-What about the state changes? Well, interestingly, the leading proponent on the EL side for Glamsterdam hard-fork is Block-Level Access Lists that would contain the set of all writes to happen to a database. That means a BAL + Proof is all you need to keep your database up-to-date with the canonical "block"!
-
-### The STARK way
-
-STARKs are post-quantum resistant, faster to generate and don't need a "trusted" setup, as against SNARKs - the other popular paradigm of ZK proofs in this generation.
-
-Currently, though, STARKs are huge when looking at the verification time and the size of the proofs. In some cases the verification time of a STARK proof could be comparable or even more than that of the naive execution of the block itself. That's why another approach to the final proving is to generate a SNARK proof of the verification of the STARK proof with constant sizes and verification time for the final proof that's very manageable.
-
-As the protocol, the prover technology and cryptography itself evolves, it's to be seen what final form of ZK we adopt for this use case.
-
----
-# Private Enterprise EVM Chain
-
-Source: https://zilkworm.erigon.tech/documentation/use-cases/private-enterprise-evm-chain
-
-_Use Zilkworm's privacy-preserving proofs to run a permissioned EVM chain for banks, asset managers, and regulated workflows._
-
-When you don't need the blocks to verify its correctness, the interesting side-benefit is keeping transactions and their data private. Ergo, Zilkworm has a neat use case for Private Enterprise blockchains that use EVMs. Let's explore.
-
-### Private and a Blockchain?
-
-Historically blockchains have been a symbol of transparency, being permissionless and decentralized. But they are much more than that. Nowadays EVM-based chains manage trillions of dollars of assets securely every month. The security that's guaranteed by mathematics, economics and a robust ecosystem around blockchains.
-
-Naturally, after 10 years in thriving existence in the domain of secure trade, "banking", and various other use cases, it has a huge potential for larger Enterprises.
-
-But not all use cases can be as simple as deploying a smart contract on Ethereum or an L2 due to concerns of security, regulation, privacy, business needs and other reasons. That's why the next major chunk of this economy would have to aboard the blockchain ship in a slightly different way.
-
-### A state root, a proof, and a long lever to move the world
-
-An Ethereum node is in the middle of an adversarial environment. Any or all of its peers could be malicious, or in other words, feed data that's incorrect. We have several mechanisms to ensure that the correct chain is the one that has been correctly processed and is also seen by the super-majority of other nodes across the globe.
-
-In the heart of this "correct" view of the world is the State Root. It is the merkle root of all state data. This tiny 32-byte string ensures that all of the accounting is correct to the last dots and crosses. The merkle root comes out wildly different for the tiniest of modifications of the data. In a way the whole world is constantly looking at everything just to ensure that they are seeing this correct state root.
-
-Looked at another way, this also means if I can mathematically prove to you that an "old" state root goes to a "new" state root only after correct EVM execution, you should be convinced of the new state root without the being wholly aware of what is going on in the world. And that's why a proof + state-root is solid grounds enough to have a blockchain (safely) moving.
-
-### A swift Example!
-
-Let's say you, Alice, have a 100 units of an asset with ZBank and now want to transfer it to your account in FBank.
-
-Traditionally, this uses a fancy version of "trust-me-bro" consensus between the two banks like SWIFT. Meaning, you may not be allowed this transfer or a 100 other things. An easier path would be not having that asset in the first place, but let's say ZBank and YBank have both decided to be cypherpunks now and they run their own private blockchains and would settle interbank on Ethereum!
-
-The transactions would look something like this
-
-Alice -> ZBank chain: tx (send YBank 100, credit Alice)
-
-The accounting it will create in ZBank's chain would be
-
-ZBank - Alice: (100)\
-YBank - Alice: 100\
-ZBank - YBank: Settle 100
-
-Now for the settlement process, two ways can work
-
-* Direct Ethereum settling\
-  Alice or YBank can now submit a ZK proof to a specific contract in Ethereum regarding the fact that Alice caused a ZBank - YBank: Settle 100 event
-* Submit  a proof on YBank's chain\
-  Alice can directly submit a ZK proof on YBank chain that it transferred the 100 units of asset, it'll be YBank's responsibility to clear the balance on ZBank chain.
-
-### How do you generate these proofs?
-
-The previous example was somewhat cliche but in general proofs are just hidden EVM smart contract execution. So the way to enable such functionality would be to write good smart contracts that can do these things already - such as existing bridge contracts. Then it is a simple matter of submitting full block proofs and/or proofs on certain transactions.
-
-One great feature of the ZK proofs generated with zkVMs these days is "public outputs" that embed certain values that come out after processing. The public outputs, for instance, can be the values of "settlement" between ZBank and YBank in the previous example.
-
-From the block proof alone it can't be inferred if an extraneous settlement is pending. So, an interbank settlement would need to see a certain transaction trace and the public output. This is where Zilkworm's transaction prover comes in that can be configured to output public outputs on re-running certain transactions.
-
-### Big talk, does it work?
-
-It works, yes. But if you are interested in a partnership in exploring the most straightforward and robust Zero-Knowledge proofs on EVMs, give us a ping!
-
----
-# Write Your Own Rollups Using Zilkworm
-
-Source: https://zilkworm.erigon.tech/documentation/use-cases/write-your-own-rollups-using-zilkworm
-
-_How Zilkworm could power L2/rollup proofs (projection — L2 execution and proving are not yet supported)._
-
-## Introduction
-
-This article explores how Zilkworm can be used to generate proofs for an L2 rollup. This is made possible by the fact that most popular L2s and blockchain networks out there use EVMs under the hood.
-
-We give a brief introduction to rollups and their validity mechanisms before diving deeper into the technical bits and other considerations for an existing or new chain project.
-
-### Why a rollup?
-
-It’s a known fact that Ethereum L1 has issues scaling transaction throughput and that’s why rollups can batch transactions, thereby lowering the costs and scaling the ecosystem.
-
-```mermaid
-flowchart LR
-    USERS["Users"]
-    subgraph L2["L2 rollup"]
-        SEQ["Sequencer"]
-        EXEC["Execute<br/>batch"]
-    end
-    subgraph L1["Ethereum L1"]
-        ROLLUP["Rollup<br/>contract"]
-    end
-
-    USERS -->|tx| SEQ
-    SEQ --> EXEC
-    EXEC -->|"batch + validity"| ROLLUP
-
-    style ROLLUP stroke-dasharray: 5 5
-```
-
-In principle the validation of the raw batch of transactions happens on a “side-chain” by a process outside of L1 transaction validation itself. But the proof of validity of these L2 transactions are then put back into L1 in batches using two popular methods:
-
-1. Optimistic L2 block inclusion aided by fraud proofs\
-   Essentially the validators apply a sequenced batch of transactions and the verifiers have a certain “challenge period” during which they observe these transactions and can submit a fraud proof if there is a discrepancy.
-2. Zero-knowledge proofs of L2 batches/blocks verified on L1\
-   A certain entity would process a batch of transaction using a ZKP circuit and generate a proof of transaction batch that then gets posted to and verified by a smart contract on L1.
-
-Of course there are many variations in the two, and even some others. In this article, we will dive into how we could use Zilkworm in an L2 like Arbitrum for a better user experience with the rollup mechanism.
-
-### Example of Arbitrum
-
-As the most popular L2 at the moment, Arbitrum sequences a huge number of transactions and submits checkpoints to L1. Given the gigantic volume of transactions, the sequencer needs to be powerful and low-latency, and somewhat centralized in practice.\
-\
-The pros roughly are that users have a good experience with low-gas prices, and the security isn’t too far off that of mainnet. A con of this approach is that users have to wait for a challenge period before they are allowed to withdraw their assets out of the chain (back to Ethereum L1). Further, if the sequencer(s) are somewhat centralized or local to a region, it could censor certain users or geographies.\
-\
-If, however, sequencers don’t submit bad blocks, then fraud proofs are a rare occurrence and all goes well most of the time. But, that only applies to a chain as big and articulated as Arbitrum that has another leg of guarantee - reputation costs upon submitting invalid transactions through the sequencers.
-
-### How would a z(il)k-Rollup work here
-
-```mermaid
-flowchart LR
-    SEQ["Sequencer<br/>(Arbitrum)"]
-    PV["Prover-validator<br/>+ Zilkworm"]
-    subgraph L1["Ethereum L1"]
-        OPT["Optimistic<br/>inclusion"]
-        VER["SNARK-verifier<br/>contract"]
-    end
-
-    SEQ -->|batch| OPT
-    SEQ -->|transactions| PV
-    PV -->|"SNARK proof"| VER
-    VER -.->|"finalize / reject"| OPT
-
-    style OPT stroke-dasharray: 2 3
-```
-
-The core of Arbitrum is almost the same as that of Ethereum - they both use EVM! That means the same Zilkworm core we discuss can be used to process Arbitrum transactions as well, with minor changes to the logic. Essentially, an Arbitrum sequencer (can be decentralized) will submit a batch of transactions on a previous block or L1 checkpoint. This gets “optimistically” included right away to subvert bad UX. But soon enough another “prover-validator” runs the batch of transactions to generate a succinct proof with Zilkworm and submits it to an L1 SNARK-verifier contract.\
-\
-Since a bad transaction could not be generated by the Zilkworm prover, or a bad proof would refuse to verify, the L1 verification would not go through, and L2 would then mark it as a bad block.\
-On the up side, the security now is truly L1-level once the proof verification is done - no wait for the challenge period!
-
-### The tech checklist
-
-With a team of capable C++ engineers, one could easily adapt Zilkworm for a specific use case (or contact us to get it done). The following would typically be in this journey to the final deliverable:
-
-* Identify compatibility variance with Ethereum mainnet
-* Identify performance requirements and run Zilkworm benchmarks to know the numbers and hardware resources required for proving
-* Fork the Zilkworm repo for unofficial variant adapted to the specific changes. The EVM and the state transition bits may need to be changed to fit in a chain such as, say, Arbitrum
-* Run protocol execution tests for that protocol - similar to Ethereum/tests or EESTs to check correctness and performance for individual opcodes/contracts etc.
-* Prove the chain!
-
-## High-level considerations
-
-### The performance considerations of ZK proving
-
-A big disadvantage of zero-knowledge proofs is their computational intensity. Even until a few years ago, mainstream ZK proofs were thought to be outside of consumer hardware, but that's not the case anymore. In fact Zilkworm can typically generate an Ethereum block proof with 30M gas in under 3 minutes with a standard consumer GPU.\
-\
-This is thanks to a lot of performance optimizations and parallelization of the zkVM provers. At the time of writing this Zilkworm mainly uses SP1 Prover that is capable of accelerating proofs with GPU. Some alternatives like Brevis Pico can even prove a typical mainnet block in under 10 seconds thanks to massive parallelization over say a dozen NVIDIA RTX 5090s.
-
-Another consideration is the long release iteration cycle and developer time it used to take a few years ago to hand-craft circuits. Thanks to most zkVMs now turning to general purpose minimalistic ISAs like RISC-V, any generic C++ or Rust program could be proved.\
-\
-This allows Zilkworm to take advantage of the C++ compilers and Rust tooling integration around RISC-V to deliver a robust end-to-end block and transaction prover.
-
-### Decentralization Argument
-
-For "big" batches of transactions, decentralization could be detrimental to the UX. But, decentralization is a de-facto requirement of blockchains for all the reasons of avoiding single point of failure and censorship.
-
-Essentially, a proof can be a direct replacement of the re-execution or dependence of secondary mechanisms like fraud proofs. A validator just needs to download a proof (&lt; 100KB) verify it and voila, the head of your rollup chain is canonical. So a validator in this case doesn't need to be massively compute capable.
-
-The other argument against decentralization like this is that an apex org or foundation-controlled sequencer makes money on the transactions that help secure that L2, if the sequencers don't have to compete with external players. This, however, can still be maintained with a zk-proofs-based validity mode, if the provers are only the ones that are designated to organise the flow of fees. E.g. a prover could make 1000x the "fees" money than a permissionless set of validators.
-
-The risks due to censorships and network downtime far outweigh the arguments against zk-proofs based decentralized consensus
-
-### The potential L3 "fraud" amplification
-
-For an optimistic rollup such as Arbitrum, there is a certain "wait-period" before assets from a child chain can be withdrawn to the parent chain. This is typically 7 days or something around that. It ensures that there is at least 1 honest validator out there that has enough time to check a block and verify it's not bad.
-
-But from the perspective of the code that's running the protocol, "optimism" means nothing here, as for any state change to happen from a child -> parent messaging, the wait time has to be respected. It is therefore a constant amount of time before it can happen.
-
-Naturally, the questions is, how about an L3, which is an optimistic chain on top of another optimistic chain? Well, that must have an additional (compounded) 7 day waiting period as well. And now the logistics are extremely complicated upon submission of a successful fraud proof on the L2 (the parent of the L3 in question).
-
-Suppose Block L3\_N is where a massive transaction takes place on L3. After 7 days many transactions take place on L3 and L2, but the L3\_N is now finalized on L2, and a transfer from L3 to L2 can happen on block L2\_N. The transfer is deemed successful, but after 7 days someone submits a fraud proof reverting L2\_N and therefore L3\_N and all blocks for the next 14 days on L3!\
-\
-The ecosystem would be in a mayhem in this "worst-case" scenario. But, on average, this is a very rare occurrence. Of course, it's not hard to guess that a ZK-proof submitted for L3\_N and L2\_N would have finalized it instantly on L1 and it would NEVER come to this.
-
-### Conclusion
-
-The gap for security in rollups can be filled by an easy to use proving mechanism for full block state transition. Although optimistic rollups have leg up in performance, zkVM implementations have caught up and Zilkworm can deliver the missing piece for an EVM-based L2/L3 chain to enable a zk-based rollup.
