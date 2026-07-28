@@ -3,10 +3,9 @@ import Link from '@docusaurus/Link';
 
 const cards = [
   {label: 'Welcome',         desc: 'Start here — overview of Zilkworm and the documentation map.', to: '/documentation'},
-  {label: 'Introduction',    desc: 'The Zilkworm project at a glance.',                            to: '/documentation/getting-started/introduction'},
-  {label: 'Getting Started', desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/getting-started'},
   {label: 'How it works',    desc: 'Technical details of the prover pipeline.',                    to: '/documentation/getting-started/how-it-works'},
-  {label: 'Use Cases',       desc: 'Block proofs, rollups, and private enterprise EVM chains.',    to: '/documentation/use-cases/ethereum-block-proofs'},
+  {label: 'Quickstart',      desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/getting-started/quickstart-hypercube'},
+  {label: 'CLI Reference',   desc: 'Every zilkworm command, flag, and environment variable.',      to: '/documentation/getting-started/cli-reference'},
   {label: 'GitHub',          desc: 'Source code, issues, and releases.',                           href: 'https://github.com/erigontech/zilkworm'},
 ];
 

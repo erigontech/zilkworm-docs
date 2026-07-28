@@ -2,13 +2,18 @@
 
 > A native, lightweight, performant ZKEVM core written in C++. Generates ZK proofs that an Ethereum block was executed correctly without re-executing the block itself.
 
-## Basics
+## Fundamentals
 
-- [Background](https://zilkworm.erigon.tech/documentation/getting-started/background) — Why Zilkworm exists — Ethereum scaling, ZK proofs, and the case for a native C++ ZKEVM core.
-- [FAQs](https://zilkworm.erigon.tech/documentation/getting-started/faqs) — Frequently asked questions about Zilkworm — benchmarks, team, timeline, integration plans, and prover backends.
-- [Getting Started](https://zilkworm.erigon.tech/documentation/getting-started/getting-started) — Run the Zilkworm prover via the pre-built Docker image — setup, block fetch, dry-run execute, prove, and CUDA acceleration.
+- [Background](https://zilkworm.erigon.tech/documentation/fundamentals/background) — Background of the technology and internals of the zkEVM
+- [Write Your Own Rollups Using Zilkworm](https://zilkworm.erigon.tech/documentation/fundamentals/write-your-own-rollups-using-zilkworm) — How Zilkworm could power L2/rollup proofs (projection — L2 execution and proving are not yet supported).
+
+## Getting Started
+
+- [CLI reference](https://zilkworm.erigon.tech/documentation/getting-started/cli-reference) — CLI Reference
+- [Ethproofs prover](https://zilkworm.erigon.tech/documentation/getting-started/ethproofs-prover) — This page covers only the Ethproofs integration through the service mode
 - [How it works](https://zilkworm.erigon.tech/documentation/getting-started/how-it-works) — How the Zilkworm prover works — the C++ EVM core runs as riscv32im firmware inside a zkVM that traces execution and proves it with a pluggable backend such as SP1.
-- [Introduction](https://zilkworm.erigon.tech/documentation/getting-started/introduction) — Zilkworm is an evolution of Erigon's C++ Silkworm client focused on zero-knowledge proofs — a RISC-V-targeted core that proves full Ethereum block state transitions.
+- [Quickstart: Hypercube prover](https://zilkworm.erigon.tech/documentation/getting-started/quickstart-hypercube) — This guide walks you through running proofs for mainnet Ethereum blocks with the SP1 Hypercube prover. Hypercube is deeply integrated within zilkworm to run efficiently. Zilkworm's compiled guest is hosted and run through the Hypercube zkVM with the service command. Optionally, the service provides direct Ethproofs integration. This example guide uses the pre-built docker image.
+- [Running The Prover Service](https://zilkworm.erigon.tech/documentation/getting-started/running-the-prover) — This page describes how to use these features through various commands and subcommands.
 
 ## Home
 
@@ -18,9 +23,3 @@
 
 - [Ethereum Execution Tests (EESTs)](https://zilkworm.erigon.tech/documentation/testing/ethereum-execution-tests-eests) — Run the Ethereum Execution Spec Tests (EELS-derived fixtures) against Zilkworm to verify EVM correctness across forks.
 - [RISC-V Testing: EESTs on rv32im via QEMU](https://zilkworm.erigon.tech/documentation/testing/riscv-testing-eests-on-rv32im-via-qemu) — Full guide to running and understanding EESTs for the RISC-V target architecture with QEMU.
-
-## Use Cases
-
-- [Ethereum Block Proofs](https://zilkworm.erigon.tech/documentation/use-cases/ethereum-block-proofs) — Generate verifiable ZK proofs of full Ethereum mainnet block execution with Zilkworm — the foundational use case.
-- [Private Enterprise EVM Chain](https://zilkworm.erigon.tech/documentation/use-cases/private-enterprise-evm-chain) — Use Zilkworm's privacy-preserving proofs to run a permissioned EVM chain for banks, asset managers, and regulated workflows.
-- [Write Your Own Rollups Using Zilkworm](https://zilkworm.erigon.tech/documentation/use-cases/write-your-own-rollups-using-zilkworm) — How Zilkworm could power L2/rollup proofs (projection — L2 execution and proving are not yet supported).
