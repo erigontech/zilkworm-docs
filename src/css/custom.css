@@ -1,8 +1,14 @@
 /**
  * Erigon brand colors — light and dark theme.
- * Primary: #1F9D3E (Erigon Orange), Hover: #1C8E38
+ * Primary: #1F9D3E (Zilkworm Green), Hover: #1C8E38
+ * The green body theme is Zilkworm-specific — a deliberate deviation from
+ * the shared Erigon palette introduced in PRs #12 / #16. The corporate
+ * footer stays Erigon Orange #EF7716. Note that docusaurus-design-spec.md
+ * still specifies orange site-wide and has not yet been amended.
  * Light bg: #FFFFFF, Dark bg: #0A0A0A
- * Fonts: Montserrat ExtraBold (headings), Nunito Sans (body)
+ * Fonts: Montserrat ExtraBold (headings), Nunito Sans (body),
+ *        Quantify 700 (brand wordmark — navbar title + footer brand, see
+ *        docusaurus-design-spec.md §7 Font Roles)
  */
 
 /* Self-hosted fonts — no Google Fonts or CDN. See docusaurus-design-spec.md §7. */
@@ -47,7 +53,7 @@
   --ifm-font-family-base: 'Nunito Sans', sans-serif;
   --ifm-heading-font-family: 'Montserrat', sans-serif;
   --ifm-heading-font-weight: 800;
-  /* Erigon Orange scale */
+  /* Zilkworm Green scale */
   --ifm-color-primary: #1F9D3E;
   --ifm-color-primary-dark: #1C8E38;
   --ifm-color-primary-darker: #1A8534;
@@ -115,6 +121,39 @@
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Montserrat', sans-serif;
   font-weight: 800;
+}
+
+h1 { letter-spacing: -0.015em; }
+h2 { letter-spacing: -0.01em; }
+
+h6 {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+/* ─── Typography rhythm ─────────────────────────────────────────────────── */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+:root {
+  --ifm-heading-line-height: 1.2;
+}
+
+.markdown h2 {
+  margin-top: 2.5rem;
+}
+.markdown h3 {
+  margin-top: 1.75rem;
+}
+
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 {
+  scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
 }
 
 /* ─── Shared landing-page card grid ─────────────────────────────────────── */
