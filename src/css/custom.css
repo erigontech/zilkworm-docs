@@ -392,10 +392,10 @@ details.alert.alert--info summary {
   transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 .footer-social-btn:hover {
-  color: #1F9D3E !important;
-  border-color: #1F9D3E !important;
+  color: #EF7716 !important;
+  border-color: #EF7716 !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(31, 157, 62,0.15);
+  box-shadow: 0 4px 12px rgba(239,119,22,0.15);
 }
 
 /* ─── Footer responsive (mobile) ────────────────────────────────────────── */
