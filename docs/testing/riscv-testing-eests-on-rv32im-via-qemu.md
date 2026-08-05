@@ -53,7 +53,7 @@ git submodule foreach 'git lfs pull'
 #### **Run EEST blockchain tests on RV32IM (via QEMU)**
 
 ```bash
-cd zilkworm/qemu_runner
+cd qemu_runner
 make eest-rv32
 ```
 
