@@ -28,25 +28,9 @@ const IconLinkedIn = () => (
 /* Monospace throughout — the footer's terminal motif, matching the site's
    monospace navbar/sidebar/TOC. The Quantify wordmark is the one exception. */
 const MONO = 'var(--ifm-font-family-monospace)';
-/* Corporate orange, footer-scoped — see "Footer accent" in custom.css. */
-const ORANGE = 'var(--footer-accent)';
 const FINE_BASE = 'var(--ifm-color-emphasis-600)';
 const ACCENT = 'var(--brand-accent)';
 const BOX_BORDER = 'var(--ifm-toc-border-color)';
-
-const socialBtnStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '38px',
-  height: '38px',
-  border: `1px solid ${BOX_BORDER}`,
-  borderRadius: 0,
-  color: 'var(--ifm-font-color-base)',
-  textDecoration: 'none',
-  background: 'transparent',
-  transition: 'color 0.15s, border-color 0.15s, background-color 0.15s',
-};
 
 export default function Footer(): React.ReactElement {
   const logoUrl = useBaseUrl('/img/logo-icon-orange.png');
@@ -73,10 +57,7 @@ export default function Footer(): React.ReactElement {
         {/* Brand lockup — image logo + wordmark, links to the corporate home
             page. One anchor wraps both so it is a single hit target. */}
         <a href="https://erigon.tech" target="_blank" rel="noopener noreferrer"
-          aria-label="Erigon home page"
-          style={{display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'inherit', textDecoration: 'none', transition: 'color 0.15s'}}
-          onMouseEnter={e => (e.currentTarget.style.color = ORANGE)}
-          onMouseLeave={e => (e.currentTarget.style.color = 'inherit')}>
+          aria-label="Erigon home page" className="footer-brand">
           <img src={logoUrl} alt="Erigon" style={{height: '32px', width: 'auto'}} />
           <span style={{fontFamily: "'Quantify', sans-serif", fontWeight: 700, fontSize: '1rem', letterSpacing: '0.04em'}}>erigon.tech</span>
         </a>
@@ -93,7 +74,7 @@ export default function Footer(): React.ReactElement {
         </p>
 
         {/* Social icon row — right aligned */}
-        <div style={{display: 'flex', flexDirection: 'row', gap: '0.6rem', flexWrap: 'wrap', marginLeft: 'auto'}}>
+        <div className="footer-socials">
           {[
             {label: 'X / Twitter', href: 'https://x.com/erigoneth', Icon: IconX},
             {label: 'Discord', href: 'https://dsc.gg/erigon', Icon: IconDiscord},
@@ -101,17 +82,7 @@ export default function Footer(): React.ReactElement {
             {label: 'LinkedIn', href: 'https://www.linkedin.com/company/erigon/', Icon: IconLinkedIn},
           ].map(({label, href, Icon}) => (
             <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}
-              style={socialBtnStyle}
-              onMouseEnter={e => {
-                e.currentTarget.style.color = ACCENT;
-                e.currentTarget.style.borderColor = ACCENT;
-                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--brand-accent) 12%, transparent)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color = 'var(--ifm-font-color-base)';
-                e.currentTarget.style.borderColor = BOX_BORDER;
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}>
+              className="footer-social">
               <Icon />
             </a>
           ))}
@@ -141,12 +112,10 @@ export default function Footer(): React.ReactElement {
           {[
             {label: 'Privacy Policy', href: 'https://erigon.tech/privacy/'},
             {label: 'Cookie Policy', href: 'https://erigon.tech/cookies/'},
-            {label: 'About Us', href: 'https://erigon.tech/about'},
+            {label: 'About Us', href: 'https://erigon.tech/about/'},
           ].map(({label, href}) => (
             <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-              style={{fontSize: '0.8rem', color: FINE_BASE, textDecoration: 'none', fontFamily: MONO, transition: 'color 0.15s'}}
-              onMouseEnter={e => (e.currentTarget.style.color = ACCENT)}
-              onMouseLeave={e => (e.currentTarget.style.color = FINE_BASE)}>
+              className="footer-legal">
               {label}
             </a>
           ))}
