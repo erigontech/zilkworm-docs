@@ -421,7 +421,18 @@ details.alert.alert--info summary {
    not :root, so it is genuinely scoped to the footer rather than merely named
    that way — --brand-accent is the site-wide Zilkworm Green and must not be
    touched. Flat across colour modes: #EF7716 reads on both footer surfaces. */
-footer { --footer-accent: #EF7716; }
+/* Surface matches the other docs sites (design spec §6.1): white in light mode,
+   black in dark — not the Infima surface grey. Declared on `footer` alongside
+   the accent so the whole footer palette stays scoped to it. */
+footer {
+  --footer-accent: #EF7716;
+  --footer-bg: #FFFFFF;
+  --footer-fg: #000000;
+}
+[data-theme='dark'] footer {
+  --footer-bg: #000000;
+  --footer-fg: #FFFFFF;
+}
 
 /* Interactive states live here, not in React onMouseEnter/onMouseLeave. Those
    only fire for a mouse, so keyboard users tabbing the footer got no accent
@@ -438,6 +449,9 @@ footer { --footer-accent: #EF7716; }
 .footer-brand:hover,
 .footer-brand:focus-visible {
   color: var(--footer-accent);
+  /* Infima's `a:hover` sets text-decoration: underline and outranks the base
+     class on specificity, so it has to be cleared on the state too. */
+  text-decoration: none;
 }
 
 .footer-socials {
@@ -473,7 +487,9 @@ footer { --footer-accent: #EF7716; }
 
 .footer-legal {
   font-size: 0.8rem;
-  color: var(--ifm-color-emphasis-600);
+  /* emphasis-700, not -600: on the white light-mode surface -600 measures
+     3.06:1, below WCAG AA's 4.5:1 for this 0.8rem text. -700 gives 5.72:1. */
+  color: var(--ifm-color-emphasis-700);
   font-family: var(--ifm-font-family-monospace);
   text-decoration: none;
   transition: color 0.15s;
@@ -481,6 +497,7 @@ footer { --footer-accent: #EF7716; }
 .footer-legal:hover,
 .footer-legal:focus-visible {
   color: var(--brand-accent);
+  text-decoration: none;
 }
 
 .footer-brand:focus-visible,

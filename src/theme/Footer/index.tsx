@@ -28,7 +28,8 @@ const IconLinkedIn = () => (
 /* Monospace throughout — the footer's terminal motif, matching the site's
    monospace navbar/sidebar/TOC. The Quantify wordmark is the one exception. */
 const MONO = 'var(--ifm-font-family-monospace)';
-const FINE_BASE = 'var(--ifm-color-emphasis-600)';
+/* -700 not -600: -600 is only 3.06:1 on the light surface (AA needs 4.5:1). */
+const FINE_BASE = 'var(--ifm-color-emphasis-700)';
 const ACCENT = 'var(--brand-accent)';
 const BOX_BORDER = 'var(--ifm-toc-border-color)';
 
@@ -37,8 +38,8 @@ export default function Footer(): React.ReactElement {
 
   return (
     <footer style={{
-      background: 'var(--ifm-background-surface-color)',
-      color: 'var(--ifm-font-color-base)',
+      background: 'var(--footer-bg)',
+      color: 'var(--footer-fg)',
       borderTop: '2px solid var(--ifm-color-primary)',
       fontFamily: MONO,
     }}>
