@@ -25,7 +25,11 @@ const IconLinkedIn = () => (
   </svg>
 );
 
+/* Monospace throughout — the footer's terminal motif, matching the site's
+   monospace navbar/sidebar/TOC. The Quantify wordmark is the one exception. */
 const MONO = 'var(--ifm-font-family-monospace)';
+/* Corporate orange, footer-scoped — see "Footer accent" in custom.css. */
+const ORANGE = 'var(--footer-accent)';
 const FINE_BASE = 'var(--ifm-color-emphasis-600)';
 const ACCENT = 'var(--brand-accent)';
 const BOX_BORDER = 'var(--ifm-toc-border-color)';
@@ -66,11 +70,16 @@ export default function Footer(): React.ReactElement {
         flexWrap: 'wrap',
       }}>
 
-        {/* Brand lockup — image logo + wordmark */}
-        <div style={{display: 'flex', alignItems: 'center', gap: '0.6rem'}}>
+        {/* Brand lockup — image logo + wordmark, links to the corporate home
+            page. One anchor wraps both so it is a single hit target. */}
+        <a href="https://erigon.tech" target="_blank" rel="noopener noreferrer"
+          aria-label="Erigon home page"
+          style={{display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'inherit', textDecoration: 'none', transition: 'color 0.15s'}}
+          onMouseEnter={e => (e.currentTarget.style.color = ORANGE)}
+          onMouseLeave={e => (e.currentTarget.style.color = 'inherit')}>
           <img src={logoUrl} alt="Erigon" style={{height: '32px', width: 'auto'}} />
           <span style={{fontFamily: "'Quantify', sans-serif", fontWeight: 700, fontSize: '1rem', letterSpacing: '0.04em'}}>erigon.tech</span>
-        </div>
+        </a>
 
         {/* Blurb */}
         <p style={{

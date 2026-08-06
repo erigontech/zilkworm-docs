@@ -415,27 +415,11 @@ details.alert.alert--info summary {
   background-color: #000000;
 }
 
-/* ─── Footer social pill buttons ─────────────────────────────────────────── */
-
-.footer-social-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.55rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.65) !important;
-  text-decoration: none !important;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-.footer-social-btn:hover {
-  color: #1F9D3E !important;
-  border-color: #1F9D3E !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(31, 157, 62,0.15);
-}
+/* ─── Footer accent ──────────────────────────────────────────────────────── */
+/* Corporate orange for the footer's brand-lockup hover. Scoped on purpose:
+   --brand-accent is the site-wide Zilkworm Green and must not be touched.
+   Flat across colour modes — #EF7716 reads on both footer surfaces. */
+:root { --footer-accent: #EF7716; }
 
 /* ─── Footer responsive (mobile) ────────────────────────────────────────── */
 
