@@ -2,9 +2,10 @@
  * Erigon brand colors — light and dark theme.
  * Primary: #1F9D3E (Zilkworm Green), Hover: #1C8E38
  * The green body theme is Zilkworm-specific — a deliberate deviation from
- * the shared Erigon palette introduced in PRs #12 / #16. The corporate
- * footer stays Erigon Orange #EF7716. Note that docusaurus-design-spec.md
- * still specifies orange site-wide and has not yet been amended.
+ * the shared Erigon palette introduced in PRs #12 / #16. In the footer, green
+ * drives the social and legal hovers; only the brand lockup hovers Erigon
+ * Orange, via the footer-scoped --footer-accent. See design spec §6.2 for this
+ * site's terminal footer variant.
  * Light bg: #FFFFFF, Dark bg: #0A0A0A
  * Fonts: Montserrat ExtraBold (headings), Nunito Sans (body),
  *        Quantify 700 (brand wordmark — navbar title + footer brand, see
@@ -424,10 +425,20 @@ details.alert.alert--info summary {
 /* ─── Footer responsive (mobile) ────────────────────────────────────────── */
 
 @media (max-width: 768px) {
+  /* The footer top row is flex, not a grid — stack it. grid-template-columns
+     here was a no-op left over from the five-column footer, so the row never
+     actually stacked on mobile. */
   .footer-top-grid {
-    grid-template-columns: 1fr !important;
-    padding: 2.5rem 1.5rem 2rem !important;
-    gap: 2.5rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 1.5rem 1.5rem 1rem !important;
+    gap: 1rem !important;
+  }
+
+  /* Socials are pushed right by margin-left:auto on desktop; reset it so they
+     align with the brand once stacked. */
+  .footer-top-grid > div:last-child {
+    margin-left: 0 !important;
   }
 
   .footer-bottom-bar {
