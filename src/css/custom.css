@@ -2,9 +2,10 @@
  * Erigon brand colors — light and dark theme.
  * Primary: #1F9D3E (Zilkworm Green), Hover: #1C8E38
  * The green body theme is Zilkworm-specific — a deliberate deviation from
- * the shared Erigon palette introduced in PRs #12 / #16. The corporate
- * footer stays Erigon Orange #EF7716. Note that docusaurus-design-spec.md
- * still specifies orange site-wide and has not yet been amended.
+ * the shared Erigon palette introduced in PRs #12 / #16. In the footer, green
+ * drives the social and legal hovers; only the brand lockup hovers Erigon
+ * Orange, via the footer-scoped --footer-accent. See design spec §6.2 for this
+ * site's terminal footer variant.
  * Light bg: #FFFFFF, Dark bg: #0A0A0A
  * Fonts: Montserrat ExtraBold (headings), Nunito Sans (body),
  *        Quantify 700 (brand wordmark — navbar title + footer brand, see
@@ -415,35 +416,115 @@ details.alert.alert--info summary {
   background-color: #000000;
 }
 
-/* ─── Footer social pill buttons ─────────────────────────────────────────── */
+/* ─── Footer accent + interactive states ─────────────────────────────────── */
+/* Corporate orange for the footer's brand-lockup hover. Declared on `footer`,
+   not :root, so it is genuinely scoped to the footer rather than merely named
+   that way — --brand-accent is the site-wide Zilkworm Green and must not be
+   touched. Flat across colour modes: #EF7716 reads on both footer surfaces. */
+/* Surface matches the other docs sites (design spec §6.1): white in light mode,
+   black in dark — not the Infima surface grey. Declared on `footer` alongside
+   the accent so the whole footer palette stays scoped to it. */
+footer {
+  --footer-accent: #EF7716;
+  --footer-bg: #FFFFFF;
+  --footer-fg: #000000;
+}
+[data-theme='dark'] footer {
+  --footer-bg: #000000;
+  --footer-fg: #FFFFFF;
+}
 
-.footer-social-btn {
+/* Interactive states live here, not in React onMouseEnter/onMouseLeave. Those
+   only fire for a mouse, so keyboard users tabbing the footer got no accent
+   state and no focus indicator. Socials and legal links hover Zilkworm Green
+   (the terminal identity); only the brand lockup hovers corporate orange. */
+.footer-brand {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.55rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.65) !important;
-  text-decoration: none !important;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  gap: 0.6rem;
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
 }
-.footer-social-btn:hover {
-  color: #EF7716 !important;
-  border-color: #EF7716 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239,119,22,0.15);
+.footer-brand:hover,
+.footer-brand:focus-visible {
+  color: var(--footer-accent);
+  /* Infima's `a:hover` sets text-decoration: underline and outranks the base
+     class on specificity, so it has to be cleared on the state too. */
+  text-decoration: none;
+}
+
+.footer-socials {
+  display: flex;
+  flex-direction: row;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.footer-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 0;
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.footer-social:hover,
+.footer-social:focus-visible {
+  color: var(--brand-accent);
+  border-color: var(--brand-accent);
+  /* Fallback first: color-mix() is Chrome/Edge 111+, Firefox 113+, Safari 16.2+.
+     Older engines keep the flat green tint instead of losing it silently. */
+  background-color: rgba(31, 157, 62, 0.12);
+  background-color: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+
+.footer-legal {
+  font-size: 0.8rem;
+  /* emphasis-700, not -600: on the white light-mode surface -600 measures
+     3.06:1, below WCAG AA's 4.5:1 for this 0.8rem text. -700 gives 5.72:1. */
+  color: var(--ifm-color-emphasis-700);
+  font-family: var(--ifm-font-family-monospace);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.footer-legal:hover,
+.footer-legal:focus-visible {
+  color: var(--brand-accent);
+  text-decoration: none;
+}
+
+.footer-brand:focus-visible,
+.footer-social:focus-visible,
+.footer-legal:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
 }
 
 /* ─── Footer responsive (mobile) ────────────────────────────────────────── */
 
 @media (max-width: 768px) {
+  /* The footer top row is flex, not a grid — stack it. grid-template-columns
+     here was a no-op left over from the five-column footer, so the row never
+     actually stacked on mobile. */
   .footer-top-grid {
-    grid-template-columns: 1fr !important;
-    padding: 2.5rem 1.5rem 2rem !important;
-    gap: 2.5rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 1.5rem 1.5rem 1rem !important;
+    gap: 1rem !important;
+  }
+
+  /* Socials are pushed right by margin-left:auto on desktop; reset it so they
+     align with the brand once stacked. Targets the dedicated class, not
+     > div:last-child, which broke if another div were appended. */
+  .footer-socials {
+    margin-left: 0;
   }
 
   .footer-bottom-bar {
