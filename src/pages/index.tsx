@@ -102,10 +102,10 @@ const capabilities: Card[] = [
   },
 ];
 
-const exampleCommand = `# Prove and verify an Ethereum block
-z6m_prover setup
-z6m_prover prove --block-number 23456789 --proof-path proof.bin
-z6m_prover verify --proof-path proof.bin --vk-path vk.bin`;
+const exampleCommand = `# Prove an Ethereum mainnet block on GPU
+z6m_prover --service --rpc-url $RPC_URL --data-dir ./data \\
+  --start-block 23456789 --end-block 23456789 --prove-every 1
+# → ./data/23456789/proof23456789.bin`;
 
 export default function Home(): React.ReactElement {
   return (
