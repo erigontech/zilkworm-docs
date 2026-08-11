@@ -103,7 +103,7 @@ const capabilities: Card[] = [
 ];
 
 const exampleCommand = `# Prove an Ethereum mainnet block on GPU
-z6m_prover --service --rpc-url $RPC_URL --data-dir ./data \\
+SP1_PROVER=cuda z6m_prover --service --rpc-url $RPC_URL --data-dir ./data \\
   --start-block 23456789 --end-block 23456789 --prove-every 1
 # → ./data/23456789/proof23456789.bin`;
 
