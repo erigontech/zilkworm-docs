@@ -710,18 +710,35 @@ docker run --rm -v "$PWD:/work" somnergy/z6m_prover \
   execute --block-number 23100000 --data-dir /work/data
 ```
 
-Proving a block on GPU for a single block can be initiated as follows:
+Proving a single block on GPU is done with service mode, bounded to one block:
+
 ```bash
 docker run --rm --gpus all --network host \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$PWD:/work" \
   -e SP1_PROVER=cuda \
   somnergy/z6m_prover:latest \
-  prove --block-number 23100000 --data-dir /work/data
+  --service --rpc-url "$RPC_URL" --data-dir /work/data \
+  --start-block 23100000 --end-block 23100000 \
+  --prove-every 1 --proof-type compressed
 ```
 
+The proof is written to `<data-dir>/<block>/proof<block>.bin` — here
+`/work/data/23100000/proof23100000.bin`. Service mode fetches the block and its witness itself, so no separate
+`fetch` run is needed.
+
+:::warning
+Use service mode, not the one-shot `prove` subcommand, whenever you need the proof **on disk**. `prove` keeps the
+proof in memory and never writes it, ignores `--proof-path`, and exits 0 even when proving fails — see
+[`prove` in the CLI reference](cli-reference.md#prove). Two flags above are load-bearing: `SP1_PROVER=cuda` (any
+other value, or unset, silently selects the CPU prover) and `--prove-every 1` (it is a modulo on the block number
+and defaults to *never*, so omitting it proves nothing).
+:::
+
 The docker image builds with `CUDA_ARCHS="89,90,100"` so it already bakes in support for the latest NVIDIA GPU architectures for SP1-GPU.
-To prove the blocks in a continuous fashion, you can use the `--service` mode as follows:
+
+To keep proving continuously instead, drop the block bounds and widen the interval — with `--prove-every 100`, only
+blocks whose number is divisible by 100 are proved:
 
 ```bash
 z6m_prover --service --rpc-url "$RPC_URL" --data-dir /mnt/data \
@@ -853,8 +870,13 @@ Before running the tests, make sure the following tools are installed:
 * `git,git-lfs`
 * `python3,python3-pip,pipx`
 * `ctest` (usually shipped with CMake, but ensure it’s available on your PATH)
+* `rust/cargo` — see [rustup.rs](https://rustup.rs)
 
 > `git-lfs` is required because some test fixtures have very large files.
+
+> Rust is required even though the tests themselves are C++: `eest-blockchain-tests` depends on `eest-rlp-build`,
+> which builds the `z6m_eest_convert` fixture converter with `cargo build --release`. That build also resolves the
+> `erigontech/sp1` git dependency, so the first run takes a while.
 
 #### Clone the repository
 
