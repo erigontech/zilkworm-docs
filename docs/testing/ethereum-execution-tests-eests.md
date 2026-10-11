@@ -36,8 +36,13 @@ Before running the tests, make sure the following tools are installed:
 * `git,git-lfs`
 * `python3,python3-pip,pipx`
 * `ctest` (usually shipped with CMake, but ensure it’s available on your PATH)
+* `rust/cargo` — see [rustup.rs](https://rustup.rs)
 
 > `git-lfs` is required because some test fixtures have very large files.
+
+> Rust is required even though the tests themselves are C++: `eest-blockchain-tests` depends on `eest-rlp-build`,
+> which builds the `z6m_eest_convert` fixture converter with `cargo build --release`. That build also resolves the
+> `erigontech/sp1` git dependency, so the first run takes a while.
 
 #### Clone the repository
 
