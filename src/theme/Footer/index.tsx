@@ -75,21 +75,6 @@ export default function Footer(): React.ReactElement {
             </a>
           ))}
         </div>
-
-        {/* Project links, right aligned */}
-        <nav className="footer-links" aria-label="Zilkworm links">
-          {[
-            {label: 'github', href: 'https://github.com/erigontech/zilkworm', title: 'Zilkworm on GitHub'},
-            {label: 'releases', href: 'https://github.com/erigontech/zilkworm/releases', title: 'Zilkworm releases'},
-            {label: 'ethproofs', href: 'https://ethproofs.org/provers', title: 'Ethproofs provers'},
-            {label: 'blog', href: 'https://zilkworm.hashnode.dev', title: 'Zilkworm blog'},
-          ].map(({label, href, title}) => (
-            <a key={label} href={href} target="_blank" rel="noopener noreferrer" title={title}
-              className="footer-link">
-              {label}
-            </a>
-          ))}
-        </nav>
       </div>
 
       {/* Divider */}

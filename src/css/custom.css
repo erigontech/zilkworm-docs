@@ -336,43 +336,12 @@ footer {
   text-decoration: none;
 }
 
-.footer-links {
-  display: flex;
-  flex-direction: row;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-left: auto;
-}
-
-.footer-link {
-  display: inline-flex;
-  align-items: center;
-  height: 38px;
-  padding: 0 0.9rem;
-  border: 1px solid var(--ifm-toc-border-color);
-  border-radius: 0;
-  color: var(--ifm-font-color-base);
-  font-size: 0.85rem;
-  text-decoration: none;
-  background: transparent;
-  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
-}
-.footer-link:hover,
-.footer-link:focus-visible {
-  color: var(--brand-accent);
-  border-color: var(--brand-accent);
-  text-decoration: none;
-  /* Fallback first: color-mix() is Chrome/Edge 111+, Firefox 113+, Safari 16.2+.
-     Older engines keep the flat green tint instead of losing it silently. */
-  background-color: rgba(31, 157, 62, 0.12);
-  background-color: color-mix(in srgb, var(--brand-accent) 12%, transparent);
-}
-
 .footer-socials {
   display: flex;
   flex-direction: row;
   gap: 0.6rem;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .footer-social {
@@ -414,7 +383,6 @@ footer {
 }
 
 .footer-brand:focus-visible,
-.footer-link:focus-visible,
 .footer-social:focus-visible,
 .footer-legal:focus-visible {
   outline: 2px solid var(--brand-accent);
@@ -434,10 +402,7 @@ footer {
     gap: 1rem !important;
   }
 
-  /* Links are pushed right by margin-left:auto on desktop; reset it so they
-     align with the brand once stacked. Targets the dedicated class, not
-     > div:last-child, which broke if another div were appended. */
-  .footer-links {
+  .footer-socials {
     margin-left: 0;
   }
 
