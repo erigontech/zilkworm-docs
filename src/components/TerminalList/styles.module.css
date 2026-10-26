@@ -1,0 +1,99 @@
+.frame {
+  margin: 0.75rem 0 1.5rem;
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+/* Straddles the top border. */
+.titleBar {
+  width: fit-content;
+  max-width: calc(100% - 1.5rem);
+  margin: -0.7em 0 0 0.75rem;
+  padding: 0 0.5rem;
+  background: var(--ifm-background-color);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--ifm-font-color-base);
+  overflow-wrap: anywhere;
+}
+.dollar,
+.prompt,
+.cursor {
+  color: var(--brand-accent);
+  font-weight: 700;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 0 0;
+}
+.rows > li {
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.description {
+  grid-column: 2;
+  margin-top: 0.15rem;
+  font-family: var(--ifm-font-family-base);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ifm-color-emphasis-800);
+  overflow-wrap: anywhere;
+}
+.prompt {
+  line-height: 1.4;
+}
+
+/* Matches the sidebar's open category. */
+.row:hover,
+.row:focus-visible {
+  background-color: var(--brand-accent);
+  color: #fff;
+  text-decoration: none;
+  /* Visible in forced-colors mode. */
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+.row:hover .prompt,
+.row:hover .description,
+.row:focus-visible .prompt,
+.row:focus-visible .description {
+  color: #fff;
+}
+
+:global([data-theme='dark']) .description {
+  color: var(--ifm-color-emphasis-700);
+}
+
+.cursorLine {
+  padding: 0.65rem 1rem 0.9rem;
+  line-height: 1.4;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cursor {
+    animation: blink 1.06s steps(1, end) infinite;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}

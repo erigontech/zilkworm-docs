@@ -206,7 +206,7 @@ html {
   padding: 0.3rem;
   margin-left: 0.25rem;
   color: var(--navbar-btn-color);
-  border-radius: 6px;
+  border-radius: 0;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
 
@@ -228,12 +228,11 @@ html {
 /* ─── Pagination nav cards (prev/next) ───────────────────────────────────── */
 
 .pagination-nav__link {
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
+  box-shadow: none;
+  transition: border-color 0.2s ease !important;
 }
 .pagination-nav__link:hover {
   border-color: #1F9D3E !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
 }
 
 /* ─── Details / collapsible sections ─────────────────────────────────────── */
@@ -243,7 +242,7 @@ details.alert.alert--info {
   --ifm-alert-border-color: rgba(0, 0, 0, 0.1);
   background-color: rgba(0, 0, 0, 0.05) !important;
   border-color: rgba(0, 0, 0, 0.1) !important;
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
 }
 [data-theme='dark'] details.alert.alert--info {
@@ -263,32 +262,13 @@ details.alert.alert--info summary {
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* ─── 404 page cards ─────────────────────────────────────────────────────── */
-
-.card-404 {
-  display: flex;
-  flex-direction: column;
-  padding: 1.25rem 1.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  text-decoration: none !important;
-  color: inherit !important;
-  background: var(--ifm-background-surface-color, var(--ifm-background-color));
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-.card-404:hover {
-  border-color: #1F9D3E;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
-}
-
 /* ─── 404 page buttons ────────────────────────────────────────────────────── */
 
 .button-404-primary {
   background: #1F9D3E;
   color: #ffffff !important;
   padding: 0.65rem 1.6rem;
-  border-radius: 6px;
+  border-radius: 0;
   font-weight: 700;
   font-size: 0.95rem;
   text-decoration: none !important;
@@ -302,7 +282,7 @@ details.alert.alert--info summary {
   border: 1px solid var(--ifm-color-emphasis-300);
   color: var(--ifm-font-color-base) !important;
   padding: 0.65rem 1.6rem;
-  border-radius: 6px;
+  border-radius: 0;
   font-weight: 600;
   font-size: 0.95rem;
   text-decoration: none !important;
@@ -489,7 +469,7 @@ footer {
 /* the box hugs the items (content height), with more margin OUTSIDE + padding INSIDE */
 .menu > .menu__list {
   border: 1px solid var(--ifm-toc-border-color);
-  border-radius: 8px;
+  border-radius: 0;
   margin: 1rem 0.75rem;
   padding: 0;
   height: fit-content;

@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
+import {TerminalFrame, TerminalRow} from '@site/src/components/TerminalList';
 
 const cards = [
   {label: 'Overview',           desc: 'What Zilkworm ships and where to start.',                  to: '/'},
@@ -40,8 +41,8 @@ export default function NotFoundContent(): React.ReactElement {
         </div>
       </section>
 
-      {/* Cards */}
-      <section style={{maxWidth: '1100px', margin: '0 auto', padding: '3rem 2rem 5rem'}}>
+      {/* Links */}
+      <section style={{maxWidth: '800px', margin: '0 auto', padding: '3rem 2rem 5rem'}}>
         <h2 style={{
           fontFamily: "'Montserrat', sans-serif", fontWeight: 800,
           fontSize: '1.1rem', marginBottom: '1.5rem',
@@ -50,21 +51,11 @@ export default function NotFoundContent(): React.ReactElement {
         }}>
           Where would you like to go?
         </h2>
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem'}}>
-          {cards.map(({label, desc, to, href}) => {
-            const inner = (
-              <>
-                <div style={{fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.35rem', color: 'var(--ifm-font-color-base)'}}>{label}</div>
-                <div style={{fontSize: '0.85rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>{desc}</div>
-              </>
-            );
-            return href ? (
-              <a key={label} href={href} target="_blank" rel="noopener noreferrer" className="card-404">{inner}</a>
-            ) : (
-              <Link key={label} to={to!} className="card-404">{inner}</Link>
-            );
-          })}
-        </div>
+        <TerminalFrame command="zilkworm docs /">
+          {cards.map(({label, desc, to, href}) => (
+            <TerminalRow key={label} href={href ?? to!} title={label} description={desc} external={!!href} />
+          ))}
+        </TerminalFrame>
       </section>
     </main>
   );
