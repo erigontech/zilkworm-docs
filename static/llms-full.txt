@@ -9,11 +9,13 @@ _Zilkworm runs stateless Ethereum block execution in RISC-V zkVM guests and ship
 
 # Zilkworm
 
-Zilkworm is a stateless Ethereum block execution engine in C++, compiled to RISC-V guests for zkVMs.
-Each proof covers one block: it shows the guest ran the block from its witness and committed the result.
-Ethproofs operators run it to prove mainnet blocks, researchers use it to estimate proving cost, and contributors build and test it.
+These docs show you how to run a Zilkworm prover, what its proofs actually say, and how to build and test it yourself.
 
-The code is on [GitHub](https://github.com/erigontech/zilkworm), and release assets are on the [releases page](https://github.com/erigontech/zilkworm/releases).
+Zilkworm is a stateless Ethereum block execution engine in C++, compiled to RISC-V guests for zkVMs.
+Each proof covers one block, and it shows that the guest ran the block from its witness and committed the result.
+Ethproofs operators run it to prove mainnet blocks. Researchers use it to estimate proving cost, and contributors build and test it.
+
+The code is on [GitHub](https://github.com/erigontech/zilkworm), and you can download release assets from the [releases page](https://github.com/erigontech/zilkworm/releases).
 
 ---
 # Choosing a prover
@@ -24,20 +26,24 @@ _Compare the Airbender and Hypercube provers, the HashState guest and the ZisK b
 
 # Choosing a prover
 
-Zilkworm compiles one C++ block execution engine into a RISC-V guest for each zkVM. The table compares them at release v0.1.0-alpha.7.
+This page helps you pick a prover for what you want to do, whether that's posting proofs to Ethproofs, measuring cycles or validating against ERE.
+
+Zilkworm compiles one C++ block execution engine into a RISC-V guest for each zkVM, so every prover pairs the same engine with a different zkVM. Here is how they compare at release v0.1.0-alpha.7.
 
 | Prover | zkVM | ISA | What ships | Inputs | Host check | Hardware | Status | Ethproofs |
 |---|---|---|---|---|---|---|---|---|
 | [Airbender](./airbender-prover.md) | Airbender v3 | `rv32im_zicsr` | Image `ghcr.io/erigontech/zilkworm-airbender`; guest `.bin`, `.text` and `.vk` | MFBD, EJSN | Fails on a block hash mismatch | 32 GB VRAM per GPU, CUDA 13.1 driver | Live | One live cluster |
-| [Hypercube](./hypercube-prover.md), MFBD guest | SP1 Hypercube v6.9.0 | `rv64im` | Binary `z6m_prover_hypercube`; guest `.elf` and `.vk` | MFBD, EJSN | Logs public values only | Not stated in the repo | Shipped | No live cluster |
-| [HashState guest](../testing/ere-validation.md), ERE | SP1 v6.9.0 | `rv64im` | `stateless-validator-zilkworm-sp1-v6.9.0.elf` and `.vk` | SSZ `statelessInputBytes`, EJSN | ere-hosts compares the output | Not stated in the repo | Shipped | No |
+| [Hypercube](./hypercube-prover.md), MFBD guest | SP1 Hypercube v6.9.0 | `rv64im` | Binary `z6m_prover_hypercube`; guest `.elf` and `.vk` | MFBD, EJSN | Logs public values only | NVIDIA GPU and `sp1-gpu-server` for proving | Shipped | No live cluster |
+| [HashState guest](../testing/ere-validation.md), ERE | SP1 v6.9.0 | `rv64im` | `stateless-validator-zilkworm-sp1-v6.9.0.elf` and `.vk` | SSZ `statelessInputBytes`, EJSN | ere-hosts compares the output | Unspecified | Shipped | No |
 | [ZisK](./zisk-prover.md) | ZisK v1.3.1-alpha | `rv64im_zicsr_zba_zbb_zbs_zbkb` | Nothing yet, draft PR #86 | MFBD, EJSN | Verifies each proof before saving | CUDA 12.9, about 25 GB RAM | In progress | No |
 
-Pick Airbender to post proofs to Ethproofs today. Its cluster "Zilkworm Airbender v3 2x5090 on-prem" is the only live Zilkworm cluster on [ethproofs.org/provers](https://ethproofs.org/provers), checked 2026-10-26. Its Docker image runs the whole service from environment variables.
+If you want to post proofs to Ethproofs today, pick Airbender. Its cluster "Zilkworm Airbender v3 2x5090 on-prem" was the only live Zilkworm cluster on [ethproofs.org/provers](https://ethproofs.org/provers) as of 2026-10-26. Its Docker image runs the whole service from environment variables.
 
-Pick Hypercube to execute blocks and measure SP1 cycles, or to build on the MFBD guest. Its `execute` subcommand runs on the CPU and prints cycles and prover gas. Its service can post to Ethproofs, but no Zilkworm Hypercube cluster posts today.
+Pick Hypercube when you want to execute blocks and measure SP1 cycles, or to build on the MFBD guest. Its `execute` subcommand runs on the CPU and prints cycles and prover gas. The service can post to Ethproofs as well, though no Zilkworm Hypercube cluster does so today.
 
-The HashState guest is for ERE validation and cost estimates, not for operators. ere-hosts feeds it each fixture's `statelessInputBytes` and compares its 43-byte output with the expected one.
+The HashState guest isn't meant for operators. It exists for ERE validation and cost estimates: ere-hosts feeds it each fixture's `statelessInputBytes` and compares its 43-byte output with the expected one.
+
+ZisK is still in progress on draft PR #86, and nothing ships for it yet. [ZisK prover](./zisk-prover.md) covers running it from the branch.
 
 ## Further reading
 
@@ -56,38 +62,44 @@ _Run the Airbender GPU prover from its Docker image to follow the chain, prove b
 
 # Airbender prover
 
-The Airbender prover runs Zilkworm on ZKsync Airbender v3. It ships as a Docker image with the host, the guest and the CUDA runtime. Airbender is the zkVM behind the only live Zilkworm cluster on Ethproofs.
+This page shows you how to run the Airbender prover as a service, prove or check a single block by hand, and read what each proof commits.
+
+The Airbender prover runs Zilkworm on ZKsync Airbender v3. It ships as one Docker image that holds the host, the guest and the CUDA runtime. Airbender is also the zkVM behind the only live Zilkworm cluster on Ethproofs.
 
 ## Shipped artifacts
 
-Release v0.1.0-alpha.7 publishes the image `ghcr.io/erigontech/zilkworm-airbender:v0.1.0-alpha.7`. A push to `main` that changes the image inputs also tags it with its commit sha and with `:main`. Pulling needs no credentials.
+Release v0.1.0-alpha.7 publishes the image `ghcr.io/erigontech/zilkworm-airbender:v0.1.0-alpha.7`, and you can pull it without credentials. Whenever a push to `main` changes the image inputs, the image is also tagged with that commit sha and with `:main`.
 
-The image holds four things:
+Inside the image you'll find four things:
 
 - `/usr/local/bin/z6m_prover_airbender`: the host, with the witness converter linked in.
 - `/opt/z6m/z6m_guest.bin` and `.text`: the guest.
 - `/opt/z6m/fsv/`: the three recursion verifier programs, each as a `.bin` and a `.text` file.
 - `/usr/local/bin/airbender-entrypoint`: the entrypoint.
 
-The release also attaches the guest and its key:
+The release also attaches the guest and its key, so you can get them without opening the image:
 
 - `z6m_guest_airbender.bin` and `z6m_guest_airbender.text`: the guest, copied out of the image.
 - `z6m_guest_airbender.vk`: its `EVKEY001` v2 verification key. Register it with Ethproofs for a cluster that runs this release.
 
 The release notes give the image digest and the key's sha256.
 
-The guest targets `rv32im_zicsr` with the `ilp32` ABI. It reads MFBD witness bundles and EEST JSON fixtures wrapped as EJSN. [Witness formats](../inside-the-guest/witness-formats.md) describes both.
+The guest targets `rv32im_zicsr` with the `ilp32` ABI. It reads MFBD witness bundles and EEST JSON fixtures wrapped as EJSN, and [Witness formats](../inside-the-guest/witness-formats.md) describes both.
 
 ## Hardware
 
-- NVIDIA GPUs with at least 32 GB of VRAM each. All GPUs the container sees prove the same block together.
+Here is what a proving host needs:
+
+- NVIDIA GPUs with at least 32 GB of VRAM each. Every GPU the container sees works on the same block.
 - About 24 GB of pinned host RAM per GPU, plus a few GB for the service.
 - An NVIDIA driver for CUDA 13.1 or newer, and the NVIDIA Container Toolkit.
-- A GPU of compute capability 8.0, 8.9, 9.0 or 12.0. B200 is 10.0 and is not supported.
-- About 96 GB of RAM for the CPU backend of `prove`, if you use it.
-- Disk for the data directory: a few MB per fetched block and about 1 MB per proof.
+- A GPU of compute capability 8.0, 8.9, 9.0 or 12.0. B200 is 10.0, so it isn't supported.
+- About 96 GB of RAM if you use the CPU backend of `prove`.
+- Disk for the data directory, which grows by a few MB per fetched block and about 1 MB per proof.
 
 ## Run it
+
+The image works in two ways. Started with no arguments, it runs the proving service. Given arguments, it runs a single prover command instead, which is handy when you want to look at one block.
 
 ### Proving service
 
@@ -99,18 +111,18 @@ docker run -d --name zilkworm-airbender --gpus all --restart unless-stopped \
   ghcr.io/erigontech/zilkworm-airbender:v0.1.0-alpha.7
 ```
 
-The node behind `RPC_URL` must serve `debug_executionWitness`. With no arguments, the entrypoint runs the service and starts it again 30 s after any exit. On first start it computes the verification key on the CPU, which takes about two minutes. The service then follows the chain tip and proves every block whose number is a multiple of `PROVE_EVERY`.
+The node behind `RPC_URL` has to serve `debug_executionWitness`. The entrypoint starts the service and starts it again 30 s after any exit. On first start it spends about two minutes computing the verification key on the CPU. From then on, the service follows the chain tip and proves every block whose number is a multiple of `PROVE_EVERY`.
 
-Outputs land in `/srv/zilkworm-airbender`:
+Everything it writes lands in `/srv/zilkworm-airbender`:
 
 - `proofs/<N>/proof.bin`: one proof per proved block.
 - `provingLogs.log`: one line per proved, skipped or failed block.
 - `blocks/<N>/flatWitnessBundle<N>.mfbd`: each fetched bundle.
 - `vk-<revision>-<id>/vk.bin`: the verification key the entrypoint computed.
 
-Service logs go to stdout. Read them with `docker logs -f zilkworm-airbender`.
+Service logs go to stdout, so you can follow them with `docker logs -f zilkworm-airbender`.
 
-The entrypoint reads these variables:
+You configure the entrypoint through these variables:
 
 | Variable | Meaning |
 |---|---|
@@ -128,11 +140,11 @@ The entrypoint reads these variables:
 
 [Ethproofs posting](./ethproofs-posting.md) shows the service with the three Ethproofs variables set.
 
-On hosts whose NVIDIA runtime uses CDI, `--gpus all` does not reach the GPUs. Use `--runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all` instead.
+If your host's NVIDIA runtime uses CDI, `--gpus all` won't reach the GPUs. Use `--runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all` instead.
 
 ### One-block execution
 
-With arguments, the entrypoint runs `z6m_prover_airbender` with them and adds the guest path. The image has no fetch command. Use a bundle the service fetched, or one from the `fetch` subcommand of the [Hypercube prover](./hypercube-prover.md).
+When you pass arguments, the entrypoint runs `z6m_prover_airbender` with them and adds the guest path for you. The image has no fetch command, though. Use a bundle the service already fetched, or get one with the `fetch` subcommand of the [Hypercube prover](./hypercube-prover.md).
 
 ```bash
 N=$(ls /srv/zilkworm-airbender/blocks | sort -n | tail -1)
@@ -141,9 +153,11 @@ docker run --rm -v /srv/zilkworm-airbender/blocks/$N:/in:ro \
   execute --file-name /in/flatWitnessBundle$N.mfbd
 ```
 
-`execute` runs the guest on the simulator, without a GPU. It prints an `Executed block` line with gas used and cycles, then the block hash the guest committed. The result goes to stdout only.
+`execute` runs the guest on the simulator, so it doesn't need a GPU. It prints an `Executed block` line with gas used and cycles, followed by the block hash the guest committed. The result goes only to stdout.
 
 ### One-block proof
+
+To prove the same block, give `prove` the GPUs and somewhere to write:
 
 ```bash
 N=$(ls /srv/zilkworm-airbender/blocks | sort -n | tail -1)
@@ -154,9 +168,11 @@ docker run --rm --gpus all \
   prove --file-name /in/flatWitnessBundle$N.mfbd --output-dir /out
 ```
 
-The proof lands in `out/proof.bin`. `prove` runs the simulator first. If the guest rejects the block, `prove` stops with an error and writes no proof.
+The proof lands in `out/proof.bin`. `prove` runs the simulator first, and if the guest rejects the block, it stops with an error and writes no proof.
 
 ### Proof verification
+
+To check that proof, download the release's verification key and hand both to `verify`:
 
 ```bash
 N=$(ls /srv/zilkworm-airbender/blocks | sort -n | tail -1)
@@ -167,36 +183,36 @@ docker run --rm -v "$PWD:/w" -v /srv/zilkworm-airbender/blocks/$N:/in:ro \
   --file-name /in/flatWitnessBundle$N.mfbd
 ```
 
-`verify` runs on the CPU. Pass `--block-hash` instead of `--file-name` when the input is not at hand.
+`verify` runs on the CPU. When you don't have the input at hand, pass `--block-hash` instead of `--file-name`.
 
 ## Inputs and outputs
 
-The service follows the chain head by polling `eth_blockNumber`, or through `newHeads` when `WS_URL` is set. For each block it calls `eth_getBlockByNumber`, `debug_getRawBlock` and `debug_executionWitness`. It tries a block up to five times, each within `FETCH_TIMEOUT`, and then skips it. It converts the response to an MFBD bundle in process and writes `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`.
+The service follows the chain head by polling `eth_blockNumber`, or through `newHeads` when `WS_URL` is set. For each block it calls `eth_getBlockByNumber`, `debug_getRawBlock` and `debug_executionWitness`. It gives a block up to five tries, each within `FETCH_TIMEOUT`, and then skips it. The response becomes an MFBD bundle in process, written to `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`.
 
-The guest reads its input through the CSR oracle at `0x7C0`, as [Precompiles and syscalls](../inside-the-guest/precompiles-and-syscalls.md) describes. It commits 32 bytes of public values: the hash of the last block it validated. The bytes sit as little-endian words in registers `a0` to `a7`. An EJSN run commits zero. A failed run ends at `finish_error` and commits nothing. [Proof guarantees](../inside-the-guest/proof-guarantees.md) gives the full layout.
+Inside the zkVM, the guest reads its input through the CSR oracle at `0x7C0`, as [Precompiles and syscalls](../inside-the-guest/precompiles-and-syscalls.md) describes. It commits 32 bytes of public values: the hash of the last block it validated, laid out as little-endian words in registers `a0` to `a7`. An EJSN run commits zero, while a failed run ends at `finish_error` and commits nothing, so it can't be proven. [Proof guarantees](../inside-the-guest/proof-guarantees.md) gives the full layout.
 
-`proof.bin` is a gzipped `EPROOF01` v2 envelope, the format Ethproofs takes. The key is an `EVKEY001` v2 file.
+On disk, `proof.bin` is a gzipped `EPROOF01` v2 envelope, which is the format Ethproofs takes, and the key is an `EVKEY001` v2 file.
 
 ## Host checks
 
-The host derives the expected public output from the input alone. It reads the MFBD bundle and takes the hash of the last block not flagged invalid. `execute`, `prove`, `verify`, `--test-service` and `--service` all fail when the guest commits any other value.
+The host derives the expected public output from the input alone. It reads the MFBD bundle and takes the hash of the last block not flagged invalid. If the guest commits any other value, `execute`, `prove`, `verify`, `--test-service` and `--service` all fail.
 
-The service runs each block on the simulator before it proves it. It proves only a run that reaches the guest's exit point within the prover's cycle limit. That run and the proof must both commit the expected hash. Otherwise the block is logged as `SKIPPED` in `provingLogs.log`. A prover panic logs the block as `FAILED`. The service then rebuilds the prover and moves on.
+The service adds a second gate in front of the prover. It runs each block on the simulator first and proves only a run that reaches the guest's exit point within the prover's cycle limit. That run and the proof must both commit the expected hash, or the block is logged as `SKIPPED` in `provingLogs.log`. When the prover panics, the block is logged as `FAILED`, and the service rebuilds the prover and moves on.
 
 ## Known limits
 
-- The prover takes at most 1,073,741,822 cycles per block. A heavier block is skipped.
+- The prover takes at most 1,073,741,822 cycles per block, and a heavier block is skipped.
 - The `cpu` backend of `prove` is very slow and needs the RAM listed under Hardware.
 - The image has no kernels for B200 GPUs.
-- `prover/prover_airbender/eest-known-failures.txt` lists 25 EEST fixtures the guest does not finish. They hit resource limits; they are not wrong results.
-- A restarted service starts at the chain tip. Blocks between a crash and the restart are not proved.
+- `prover/prover_airbender/eest-known-failures.txt` lists 25 EEST fixtures the guest does not finish. They hit resource limits rather than produce wrong results.
+- A restarted service starts at the chain tip, so blocks between a crash and the restart don't get proved.
 - Reth's witness can miss an account that the block deletes. The guest recovers it from its trie path when the witness has that path. Otherwise the preflight fails and the block is skipped.
-- Reth serves no witness for a block more than about 12 blocks behind its tip. An old `START_BLOCK` gets no witnesses from reth.
-- The prover's pinned host memory is not configurable.
+- Reth serves no witness for a block more than about 12 blocks behind its tip, so an old `START_BLOCK` gets no witnesses from reth.
+- You can't configure the prover's pinned host memory.
 
 ## Measured
 
-At v0.1.0-alpha.5, the guest proved 200 consecutive mainnet blocks at a 3.4 s median on 2x RTX 5090. Figures for each release are on [Releases and assets](../reference/releases-and-assets.md).
+At v0.1.0-alpha.5, the guest proved 200 consecutive mainnet blocks at a 3.4 s median on 2x RTX 5090. You'll find the figures for each release on [Releases and assets](../reference/releases-and-assets.md).
 
 ## Further reading
 
@@ -215,7 +231,9 @@ _Run the SP1 Hypercube prover binary to execute blocks with the MFBD guest or pr
 
 # Hypercube prover
 
-The Hypercube prover runs Zilkworm on SP1 Hypercube v6.9.0. It ships as one Linux binary with the guest built in. It can execute blocks, prove them and post to Ethproofs. No Zilkworm Hypercube cluster posts to Ethproofs today.
+This page shows you how to download the Hypercube prover, execute blocks on the CPU, prove them on a GPU, and work around the gaps it still has.
+
+The Hypercube prover runs Zilkworm on SP1 Hypercube v6.9.0. It ships as one Linux binary with the guest built in, and it can execute blocks, prove them and post to Ethproofs. No Zilkworm Hypercube cluster posts to Ethproofs today, though.
 
 ## Shipped artifacts
 
@@ -225,19 +243,17 @@ Release v0.1.0-alpha.7 attaches three Hypercube files:
 - `z6m_guest_hypercube_mfbd.elf`: the DirectState guest, `rv64im` with the `lp64` ABI.
 - `z6m_guest_hypercube_mfbd.vk`: its 32-byte SP1 program verification key.
 
-The host builds on the `erigon/patches-v6.9.0` branch of `erigontech/sp1`. Keys published for alpha.6 do not verify alpha.7 proofs.
+The host builds on the `erigon/patches-v6.9.0` branch of `erigontech/sp1`. Keys published for alpha.6 do not verify alpha.7 proofs, so take the key from the same release as the binary.
 
-The guest reads MFBD witness bundles. With `--is-test`, the host wraps an EEST JSON fixture as EJSN. Raw SSZ input makes this guest return an error; the [HashState guest](../testing/ere-validation.md) takes that format. [Witness formats](../inside-the-guest/witness-formats.md) describes all three.
+The guest reads MFBD witness bundles. With `--is-test`, the host wraps an EEST JSON fixture as EJSN. Raw SSZ input makes this guest return an error, because that format belongs to the [HashState guest](../testing/ere-validation.md). [Witness formats](../inside-the-guest/witness-formats.md) describes all three.
 
 ## Hardware
 
-The repo states no VRAM or RAM figure for SP1 proving.
-
-`execute` runs on the CPU. GPU proving needs an NVIDIA GPU and SP1's `sp1-gpu-server`. No release asset carries `sp1-gpu-server`. The root `Dockerfile` builds it from `erigontech/sp1` with `CUDA_ARCHS=89` by default.
+`execute` runs on the CPU. For GPU proving you need an NVIDIA GPU and SP1's `sp1-gpu-server`. No release asset carries `sp1-gpu-server`, but the root `Dockerfile` builds it from `erigontech/sp1`, with `CUDA_ARCHS=89` by default.
 
 ## Run it
 
-Download the binary and point it at a node:
+Start by downloading the binary and pointing it at a node:
 
 ```bash
 curl -LO https://github.com/erigontech/zilkworm/releases/download/v0.1.0-alpha.7/z6m_prover_hypercube
@@ -254,16 +270,16 @@ SP1_PROVER=cuda ./z6m_prover_hypercube --service \
   --rpc-url "$RPC_URL" --data-dir data --prove-every 100
 ```
 
-The service starts at the chain head plus one and runs until stopped. It fetches and proves every block whose number is a multiple of 100. It skips other blocks without fetching them. Without `SP1_PROVER=cuda`, it proves on the CPU.
+The service starts at the chain head plus one and runs until you stop it. It fetches and proves every block whose number is a multiple of 100, and skips the others without fetching them. Leave out `SP1_PROVER=cuda` and it proves on the CPU instead.
 
-Outputs land in `data/`:
+Its outputs land in `data/`:
 
 - `blocks/<N>/flatWitnessBundle<N>.mfbd`: each fetched bundle.
 - `<N>/proof<N>.bin`: each proof, outside `blocks/`.
 - `provingLogs.log`: one line per proved or failed block.
 - `executionLogs.log`: one line per executed block.
 
-`--execute-every N` adds execution runs for blocks that are not proved. `--end-block` stops the service after that block. [Ethproofs posting](./ethproofs-posting.md) adds the three Ethproofs flags.
+`--execute-every N` adds execution runs for blocks that are not proved, and `--end-block` stops the service after that block. To post proofs, add the three Ethproofs flags from [Ethproofs posting](./ethproofs-posting.md).
 
 ### One-block execution
 
@@ -273,14 +289,14 @@ N=$(ls data/blocks | sort -n | tail -1)
 ./z6m_prover_hypercube execute --block-number $N --data-dir data
 ```
 
-`fetch` without `--block-number` takes the chain head. It writes `data/blocks/<N>/flatWitnessBundle<N>.mfbd`. Add `--geth` to `fetch` for a Geth node.
+Without `--block-number`, `fetch` takes the chain head and writes `data/blocks/<N>/flatWitnessBundle<N>.mfbd`. If your node is Geth, add `--geth` to `fetch`.
 
-`execute` runs the guest in the SP1 executor on the CPU. It prints `Executed block <N>` with gas used, cycles, prover gas and syscall count. It also appends a line to `data/executionLogs.log`.
+`execute` then runs the guest in the SP1 executor on the CPU. It prints `Executed block <N>` with gas used, cycles, prover gas and syscall count, and it appends a line to `data/executionLogs.log`.
 
 ### One-block proof
 
 :::warning
-The `prove` subcommand writes no proof file. To prove one block, run the service bounded to that block, as below. [Known limits](#known-limits) explains why.
+The `prove` subcommand doesn't write a proof file. To prove one block, run the service bounded to that block instead, as shown below. [Known limits](#known-limits) explains why.
 :::
 
 ```bash
@@ -289,23 +305,23 @@ SP1_PROVER=cuda ./z6m_prover_hypercube --service --rpc-url "$RPC_URL" --data-dir
   --start-block $N --end-block $N --prove-every 1
 ```
 
-The service fetches the block again, so the node must still serve its witness. The proof lands in `data/<N>/proof<N>.bin`. The service exits once the proof is written.
+The service fetches the block again, so your node must still serve its witness. The proof lands in `data/<N>/proof<N>.bin`, and the service exits once it's written.
 
 ## Inputs and outputs
 
-The service follows the chain head with `eth_blockNumber`. For each block it calls `eth_getBlockByNumber`, `debug_getRawBlock` and `debug_executionWitness`. It reads the witness in the reth shape; only `fetch --geth` reads the Geth shape. It converts the response to an MFBD bundle in process. `fetch` reuses a bundle already on disk, and the service always rebuilds it. `--save-all-responses` also writes `block<N>.json`, `blockRlp<N>.json` and `executionWitness<N>.json`.
+The service follows the chain head with `eth_blockNumber`, and for each block it calls `eth_getBlockByNumber`, `debug_getRawBlock` and `debug_executionWitness`. It expects the witness in the reth shape; only `fetch --geth` reads the Geth shape. Either way, the response becomes an MFBD bundle in process. If a bundle is already on disk, `fetch` reuses it, but the service always rebuilds it. With `--save-all-responses` you also get `block<N>.json`, `blockRlp<N>.json` and `executionWitness<N>.json`.
 
 The host passes the bundle unchanged on SP1 stdin. The guest commits 112 bytes of public values: `gas_used`, the pre-state root, the post-state root, the block hash and the chain id. [Proof guarantees](../inside-the-guest/proof-guarantees.md) gives the byte layout.
 
-A proof file holds a bincode-encoded `SP1ProofWithPublicValues`. `--proof-type` picks `core`, `compressed`, `groth16` or `plonk`. The default is `compressed`, and unknown values fall back to it. The service proves one block at a time, with a 30-minute timeout per proof.
+A proof file holds a bincode-encoded `SP1ProofWithPublicValues`. You choose the proof kind with `--proof-type`, which takes `core`, `compressed`, `groth16` or `plonk`; the default is `compressed`, and any unknown value falls back to it. The service proves one block at a time, with a 30-minute timeout per proof.
 
 ## Host checks
 
-The service parses the 112-byte public values of each proof and logs them. It does not compare them with the input or the chain. `execute` treats a `gas_used` of 0 as a failure and exits 1. The guest's own checks are on [Proof guarantees](../inside-the-guest/proof-guarantees.md).
+This host checks far less than the Airbender one. The service parses the 112-byte public values of each proof and logs them, but it doesn't compare them with the input or the chain. `execute` treats a `gas_used` of 0 as a failure and exits 1. The guest's own checks are on [Proof guarantees](../inside-the-guest/proof-guarantees.md).
 
 ## Known limits
 
-At v0.1.0-alpha.7:
+These hold at v0.1.0-alpha.7:
 
 - `prove` discards the proof and writes no file.
 - `prove` exits 0 when setup fails, after printing `ERROR` and the cause.
@@ -318,7 +334,7 @@ At v0.1.0-alpha.7:
 
 ## Measured
 
-At v0.1.0-alpha.7, no proving time is published. Guest cycle counts are on [Releases and assets](../reference/releases-and-assets.md).
+You'll find guest cycle counts on [Releases and assets](../reference/releases-and-assets.md).
 
 ## Further reading
 
@@ -337,39 +353,43 @@ _The ZisK backend lives in draft PR #86, runs execute-only in CI and has had one
 
 # ZisK prover
 
-ZisK support lives in [PR #86](https://github.com/erigontech/zilkworm/pull/86), a draft based on alpha.6. It is not on `main`, and no release ships it. It runs Zilkworm on ZisK v1.3.1-alpha. Every command below runs from a checkout of the PR branch, `som/zisk-impl`.
+This page shows you how to build the ZisK backend from its draft branch, execute and prove mainnet blocks with it, and see what is still untested.
+
+ZisK support lives in [PR #86](https://github.com/erigontech/zilkworm/pull/86), a draft based on alpha.6. It runs Zilkworm on ZisK v1.3.1-alpha. Because it isn't on `main` and no release ships it, every command below runs from a checkout of the PR branch, `som/zisk-impl`.
 
 ## Shipped artifacts
 
-No release carries ZisK files. The branch adds:
+No release carries ZisK files. Instead, the branch adds:
 
 - `prover/guest_zisk/`: the guest, built for `rv64im_zicsr_zba_zbb_zbs_zbkb`.
 - `prover/prover_zisk/`: the host `z6m_prover_zisk`, on `zisk-sdk` 1.3.1-alpha.
 - `zisk-eest.yml` and `zisk-benchmark.yml`: two CI workflows on the image `ghcr.io/erigontech/zilkworm-ci-zisk`.
 
-The host has the same commands and log format as `z6m_prover`: `setup`, `fetch`, `execute`, `prove`, `verify`, `--test-service` and `--service`. It adds `--executor`, `--elf`, `--proving-key` and `--remote`. `--executor` picks `emulator`, the default, or `assembly` or `ziskemu`.
+The host has the same commands and log format as `z6m_prover`: `setup`, `fetch`, `execute`, `prove`, `verify`, `--test-service` and `--service`. On top of those it adds `--executor`, `--elf`, `--proving-key` and `--remote`. `--executor` picks `emulator`, the default, or `assembly` or `ziskemu`.
 
-The guest reads MFBD witness bundles. With `--is-test`, the host wraps an EEST JSON fixture as EJSN. The ZisK EEST job runs MFBD files that `make eest-mfbd-build` converts.
+The guest reads MFBD witness bundles, and with `--is-test` the host wraps an EEST JSON fixture as EJSN. The ZisK EEST job runs MFBD files that `make eest-mfbd-build` converts.
 
 ## Hardware
 
+You'll need:
+
 - An NVIDIA driver 525.60.13 or newer.
 - CUDA Toolkit 12.9 or newer, installed under `/usr/local/cuda`.
-- About 25 GB of RAM per prover process, as ZisK's docs state.
+- About 25 GB of RAM per prover process, which is what ZisK's own docs ask for.
 - At least 64 GB of RAM for the `assembly` executor, and at least 32 GB for the Rust emulator.
 - An unlimited memlock limit, for the `assembly` executor only.
 - About 21 GB of disk for the proving key once it is set up.
 - Ubuntu 22.04 or newer. The reference machine runs Ubuntu 25.10.
 
-ZisK documents no VRAM figure. The one GPU run used a 32 GB card and filled it on every block.
+For VRAM, the only data point is the one GPU run so far: it used a 32 GB card and filled it on every block.
 
 ## Run it
 
-No service command has run against a live node yet. The steps below build the backend, execute a block and prove it.
+No service command has run against a live node yet, so this section sticks to building the backend, executing a block and proving it.
 
 ### Toolchain and ZisK
 
-Install xPack `riscv-none-elf-gcc` 15.2.0-1.1 and no other version. The Makefile puts the first xPack version it finds on `PATH`, so an older one next to it wins silently.
+Install xPack `riscv-none-elf-gcc` 15.2.0-1.1 and no other version. The Makefile puts the first xPack version it finds on `PATH`, so an older one sitting next to it wins silently.
 
 ```bash
 git clone https://github.com/erigontech/zilkworm.git && cd zilkworm
@@ -386,9 +406,9 @@ cd - && source ~/.bashrc
 cargo-zisk-dev check-setup --proving-key ~/.zisk/provingKey --gpu
 ```
 
-`ziskup` installs ZisK into `~/.zisk` and the proving key into `~/.zisk/provingKey`. It downloads the key tarball into the current directory, hence `temp/runtime`. Always pass `--version`. Without it, `ziskup` installs the latest release, whose key and binaries do not match the host.
+`ziskup` installs ZisK into `~/.zisk` and the proving key into `~/.zisk/provingKey`. It downloads the key tarball into the current directory, which is why the script changes into `temp/runtime` first. Always pass `--version`. Without it, `ziskup` installs the latest release, and that release's key and binaries do not match the host.
 
-`ziskup` runs `check-setup` with `-a`, which skips the recursive setups. The last command checks them. The full package list and the fixes for Ubuntu 25.10 are in `docs/zisk-docs.md` on the branch.
+`ziskup` runs `check-setup` with `-a`, which skips the recursive setups, so the last command checks them as well. You'll find the full package list and the fixes for Ubuntu 25.10 in `docs/zisk-docs.md` on the branch.
 
 ### Guest and host build
 
@@ -397,11 +417,11 @@ make z6m_guest_zisk
 (cd prover/prover_zisk && cargo build --release --no-default-features --features gpu)
 ```
 
-The guest lands in `prover/guest_zisk/build/z6m_guest.elf`. The GPU host lands in `prover/prover_zisk/target/release/z6m_prover_zisk`. `make z6m_prover_zisk` writes a CPU-only host to the same path and replaces the GPU one.
+The guest lands in `prover/guest_zisk/build/z6m_guest.elf` and the GPU host in `prover/prover_zisk/target/release/z6m_prover_zisk`. Be careful with `make z6m_prover_zisk`, which writes a CPU-only host to the same path and replaces the GPU one.
 
 ### Block execution
 
-Get the 200-block mainnet corpus and convert it to MFBD:
+Next, get the 200-block mainnet corpus and convert it to MFBD:
 
 ```bash
 curl -L -o temp/200_benchmark_blocks.tar.gz \
@@ -410,7 +430,7 @@ tar xzf temp/200_benchmark_blocks.tar.gz -C temp && rm temp/200_benchmark_blocks
 make sp1-benchmark-corpus
 ```
 
-The bundles land in `temp/200_benchmark_blocks_mfbd_v2/<N>/flatWitnessBundle<N>.mfbd`. Execute one block under `ziskemu`:
+The bundles land in `temp/200_benchmark_blocks_mfbd_v2/<N>/flatWitnessBundle<N>.mfbd`. Now you can execute one block under `ziskemu`:
 
 ```bash
 P=prover/prover_zisk/target/release/z6m_prover_zisk
@@ -418,11 +438,11 @@ $P --executor ziskemu execute \
   --file-name temp/200_benchmark_blocks_mfbd_v2/24545295/flatWitnessBundle24545295.mfbd
 ```
 
-`execute` needs no proving key. It prints an `Executed block` line and a `Public Values:` line to stdout. With `--file-name`, it prints the block number as 0. `make zisk-emu-check` runs all 200 blocks and compares their public values with native `state_transition`.
+`execute` needs no proving key. It prints an `Executed block` line and a `Public Values:` line to stdout, and with `--file-name` it prints the block number as 0. To run all 200 blocks and compare their public values with native `state_transition`, use `make zisk-emu-check`.
 
 ### Block proof
 
-Keep temporary files on disk. `/tmp` is often in RAM, and the ZisK SDK writes temporary files there.
+Before you prove anything, keep temporary files on disk. The ZisK SDK writes them to `/tmp`, which is often in RAM.
 
 ```bash
 export TMPDIR=$PWD/temp/runtime/tmp && mkdir -p "$TMPDIR" temp/proofs
@@ -433,9 +453,9 @@ $P prove --file-name temp/200_benchmark_blocks_mfbd_v2/24545295/flatWitnessBundl
 $P verify --proof-path temp/proofs/24545295.bin
 ```
 
-The proof lands in `temp/proofs/24545295.bin`. `prove` also appends a line to `temp/provingLogs.log`. Run `setup` once per guest ELF, because `verify` needs the program key it caches.
+The proof lands in `temp/proofs/24545295.bin`, and `prove` also appends a line to `temp/provingLogs.log`. Run `setup` once per guest ELF, because `verify` needs the program key it caches.
 
-Each `prove` process loads the proving key again. To prove many blocks, run them in one process:
+Each `prove` process loads the proving key again. When you want to prove many blocks, run them in one process:
 
 ```bash
 mkdir -p temp/zisk_gpu_run && ln -sfn ../200_benchmark_blocks_mfbd_v2 temp/zisk_gpu_run/blocks
@@ -447,33 +467,33 @@ Proofs land in `temp/zisk_gpu_run/<N>/proof<N>.bin`, with one log line each in `
 
 ## Inputs and outputs
 
-The host reads MFBD bundles by path, or from `<data-dir>/blocks/<N>/` in `--test-service` mode. The guest commits 112 bytes of public values, the same layout as the Hypercube guest. They sit in ZisK output slots 0 to 27. [Proof guarantees](../inside-the-guest/proof-guarantees.md) gives the layout.
+The host reads MFBD bundles by path, or from `<data-dir>/blocks/<N>/` in `--test-service` mode. The guest commits 112 bytes of public values in the same layout as the Hypercube guest, placed in ZisK output slots 0 to 27. [Proof guarantees](../inside-the-guest/proof-guarantees.md) gives the layout.
 
 `prove` writes the proof to `--proof-path`. The default proof type is `compressed`, which ZisK calls VadcopFinal.
 
 ## Host checks
 
-`prove` verifies each new proof before it saves it. `verify` checks a proof against the program key from the setup cache. `tools/scripts/zisk_execute.py` and `make zisk-emu-check` compare the public values with native `state_transition`.
+`prove` verifies each new proof before it saves it, and `verify` checks a proof against the program key from the setup cache. For the public values, `tools/scripts/zisk_execute.py` and `make zisk-emu-check` compare them with native `state_transition`.
 
-Inside the guest, every free-input hint from a ZisK precompile is checked. A bad inverse, square root or division hint halts the guest, so no proof exists. A bad GLV hint falls back to plain code.
+Inside the guest, every free-input hint from a ZisK precompile is checked. A bad inverse, square root or division hint halts the guest, so no proof can exist. A bad GLV hint simply falls back to plain code.
 
 ## Known limits
 
-- PR #86 is a draft based on alpha.6. It lacks the changes merged to `main` after alpha.6.
+- PR #86 is a draft based on alpha.6, so it lacks the changes merged to `main` after alpha.6.
 - No release ships ZisK files.
 - CI is execute-only. Both ZisK workflows run the guest under `ziskemu`, with no proving key, no GPU and no proofs.
-- One GPU run so far, on one RTX 5090 with `compressed` proofs.
-- Not tested yet: the `minimal` and `plonk` proof types, more than one GPU, the `assembly` executor, `--remote`, and `--service` against a live node.
-- On EEST at tests@v21.0.1, 12,253 of 12,266 fixtures pass and 10 are skipped over the 20 MB size cap. Three fail.
-- Two of those failures need more than ZisK's fixed 512 MiB of RAM. The third, `tx_invalid_first_in_block`, also failed on SP1 at alpha.6. PR #141 on `main` fixes it, and the branch lacks that fix.
+- There has been one GPU run so far, on one RTX 5090 with `compressed` proofs.
+- The `minimal` and `plonk` proof types, more than one GPU, the `assembly` executor, `--remote`, and `--service` against a live node are all untested.
+- On EEST at tests@v21.0.1, 12,253 of 12,266 fixtures pass, 10 are skipped for exceeding the 20 MB size cap, and three fail.
+- Two of those failures need more than ZisK's fixed 512 MiB of RAM. The third, `tx_invalid_first_in_block`, also failed on SP1 at alpha.6. PR #141 on `main` fixes it, but the branch doesn't have that fix.
 - Ethproofs posting for ZisK is deferred.
-- `--executor ziskemu` is execute-only. `prove` with it exits 1.
-- `ziskemu` exits 0 when the guest halts with an error. Check stderr for `finished with error`.
-- The prover fills the VRAM of a 32 GB card. The host does not yet expose `max_streams` or `minimal_memory` for smaller cards.
+- `--executor ziskemu` is execute-only, and `prove` with it exits 1.
+- `ziskemu` exits 0 even when the guest halts with an error, so check stderr for `finished with error`.
+- The prover fills the VRAM of a 32 GB card, and the host doesn't yet expose `max_streams` or `minimal_memory` for smaller cards.
 
 ## Measured
 
-PR #86 reports one GPU run, on 2026-10-08. One RTX 5090 proved 200 of 200 corpus blocks at a median proving time of 31.5 s. ZisK has no release, so [Releases and assets](../reference/releases-and-assets.md) lists no ZisK figures.
+PR #86 reports one GPU run, on 2026-10-08, in which one RTX 5090 proved 200 of 200 corpus blocks at a median proving time of 31.5 s. Since ZisK has no release, [Releases and assets](../reference/releases-and-assets.md) lists no ZisK figures.
 
 ## Further reading
 
@@ -492,23 +512,25 @@ _The Airbender and Hypercube services report each proved block to Ethproofs once
 
 # Ethproofs posting
 
-[Ethproofs](https://ethproofs.org) collects proofs of Ethereum blocks from registered proving clusters. The Airbender and Hypercube services can report to it. The ZisK backend cannot yet.
+This page shows you how to make the Airbender or Hypercube service report its proofs to Ethproofs, and what it sends along the way.
+
+[Ethproofs](https://ethproofs.org) collects proofs of Ethereum blocks from registered proving clusters. The Airbender and Hypercube services can both report to it, but the ZisK backend can't yet.
 
 ## Live clusters
 
-One Zilkworm cluster posts today: "Zilkworm Airbender v3 2x5090 on-prem". It was the only one on [ethproofs.org/provers](https://ethproofs.org/provers) when checked on 2026-10-26. The Hypercube service has the same posting code, but no Zilkworm Hypercube cluster posts.
+One Zilkworm cluster posts today, "Zilkworm Airbender v3 2x5090 on-prem". It was the only one on [ethproofs.org/provers](https://ethproofs.org/provers) when checked on 2026-10-26. The Hypercube service has the same posting code, but no Zilkworm Hypercube cluster posts.
 
 ## Three settings
 
-Posting needs all three of these:
+You turn posting on with three settings, and you need all three:
 
 - `--ethproofs-endpoint`: the API base URL. The service appends paths such as `/proofs/queued` to it.
 - `--ethproofs-token`: the API token, sent as `Authorization: Bearer <token>`.
 - `--ethproofs-cluster-id`: the numeric cluster id.
 
-With any of them unset, the service still proves but posts nothing. Only `--service` mode posts. The `prove` subcommands of both binaries never post. Both binaries accept `--post-every`, and neither uses it.
+If any of them is unset, the service still proves but posts nothing. Posting only happens in `--service` mode, because the `prove` subcommands of both binaries never post. Both binaries also accept `--post-every`, though neither uses it.
 
-The repo documents no production endpoint. Its examples in `docs/airbender-docker-service.md` and `prover/prover_airbender/README.md` use the staging API, `https://staging--ethproofs.netlify.app/api/v0`. Replace `<endpoint>` below with the URL Ethproofs gives your cluster.
+The examples in `docs/airbender-docker-service.md` and `prover/prover_airbender/README.md` use the staging API, `https://staging--ethproofs.netlify.app/api/v0`. In the commands below, replace `<endpoint>` with the URL Ethproofs gives your cluster.
 
 Each binary takes the settings in its own way:
 
@@ -524,7 +546,7 @@ For each block it proves, the service sends three POST requests:
 2. `/proofs/proving` when proving starts.
 3. `/proofs/proved` after a successful proof.
 
-`queued` and `proving` carry `block_number` and `cluster_id`. `proved` carries five fields:
+`queued` and `proving` carry only `block_number` and `cluster_id`. `proved` carries five fields:
 
 | Field | Content |
 |---|---|
@@ -534,29 +556,22 @@ For each block it proves, the service sends three POST requests:
 | `proving_cycles` | The guest's cycle count |
 | `proof` | The proof file, base64-encoded |
 
-The proof file is `proof.bin` for Airbender and `proof<N>.bin` for Hypercube. For Airbender, `proving_time` leaves out fetching, witness conversion and the preflight. Airbender posts a proof only after the preflight and the proof both commit the expected block hash.
+The proof file is `proof.bin` for Airbender and `proof<N>.bin` for Hypercube. For Airbender, `proving_time` leaves out fetching, witness conversion and the preflight. Airbender also posts a proof only after the preflight and the proof both commit the expected block hash.
 
-Each request has a 60 s timeout. `queued` and `proving` are sent once. A `proved` post that gets a 429, a 5xx or no answer is tried up to four times in all:
+Each request has a 60 s timeout, and `queued` and `proving` go out once. A `proved` post that gets a 429, a 5xx or no answer is tried up to four times in all. After a 429, the service waits as long as the body's `retryAfter` or the `Retry-After` header asks, or 30 s by default. After a 5xx or no answer it waits 10 s, and no wait is longer than 120 s. If a retry gets a 409, an earlier attempt already landed, so the service stops there.
 
-- After a 429, the service waits as long as the body's `retryAfter` or the `Retry-After` header asks. The default is 30 s.
-- After a 5xx or no answer, it waits 10 s.
-- No wait is longer than 120 s.
-- A 409 on a retry means an earlier attempt landed, and the service stops.
-
-Other errors are logged and not retried. Posts run in the background and never hold up proving. A failed post leaves the proof on disk.
+Other errors are logged and not retried. Posts run in the background and never hold up proving, and a failed post leaves the proof on disk.
 
 ## Cluster and verification key
 
-Ethproofs checks a cluster's proofs against the key registered for it. A cluster that runs the Airbender image registers `z6m_guest_airbender.vk` from the same release:
+Ethproofs checks a cluster's proofs against the key registered for it. If your cluster runs the Airbender image, register `z6m_guest_airbender.vk` from the same release:
 
 ```bash
 curl -LO https://github.com/erigontech/zilkworm/releases/download/v0.1.0-alpha.7/z6m_guest_airbender.vk
 sha256sum z6m_guest_airbender.vk
 ```
 
-The alpha.7 release notes give its sha256 as `ffcdff786029d7f9621ad8c23ece641de9d72c38ecb1097d1d4b5e3e583c1de5`. A cluster that moves to a new release image needs that release's key. On first start, the image's entrypoint also computes a key and logs its sha256.
-
-The repo documents no Ethproofs key upload for Hypercube proofs.
+The alpha.7 release notes give its sha256 as `ffcdff786029d7f9621ad8c23ece641de9d72c38ecb1097d1d4b5e3e583c1de5`. When your cluster moves to a new release image, it needs that release's key. On first start, the image's entrypoint also computes a key and logs its sha256.
 
 ## Command examples
 
@@ -574,7 +589,7 @@ docker run -d --name zilkworm-airbender --gpus all --restart unless-stopped \
   ghcr.io/erigontech/zilkworm-airbender:v0.1.0-alpha.7
 ```
 
-The entrypoint logs `posting to Ethproofs at` with the endpoint and cluster id. Proofs land in `/srv/zilkworm-airbender/proofs/<N>/proof.bin`. [Airbender prover](./airbender-prover.md) covers the rest of the service.
+When posting is on, the entrypoint logs `posting to Ethproofs at` with the endpoint and cluster id. Proofs land in `/srv/zilkworm-airbender/proofs/<N>/proof.bin`, and [Airbender prover](./airbender-prover.md) covers the rest of the service.
 
 ### Hypercube binary
 
@@ -590,7 +605,7 @@ SP1_PROVER=cuda ./z6m_prover_hypercube --service \
   --ethproofs-cluster-id "$ETHPROOFS_CLUSTER_ID"
 ```
 
-Proofs land in `data/<N>/proof<N>.bin`. [Hypercube prover](./hypercube-prover.md) covers the rest of the service.
+Proofs land in `data/<N>/proof<N>.bin`, and [Hypercube prover](./hypercube-prover.md) covers the rest of the service.
 
 ## Further reading
 
@@ -609,33 +624,34 @@ _A host feeds a block and its witness to a RISC-V guest, the guest commits publi
 
 # Execution pipeline
 
-Zilkworm is a C++ program that runs Ethereum blocks without a state database. It is compiled to RISC-V once per zkVM. The zkVM runs that guest program and proves the run.
+This page follows a block from the node to the proof, so you know which program does what and where the state comes from.
+
+Zilkworm is a C++ program that runs Ethereum blocks without a state database. It is compiled to RISC-V once per zkVM, and the zkVM runs that guest program and proves the run.
 
 ## Four steps from block to proof
 
-1. Witness in. The host fetches a block and its execution witness from a node. It packs them into one input buffer for the guest. On the ERE path, the harness passes a fixture's `statelessInputBytes` unchanged instead.
-2. Guest runs. The zkVM runs the guest on that input. The guest anchors the pre-state to the parent header's state root. It runs every transaction, then checks the header's state root and gas used against the run.
-3. Public values out. The guest commits a short, fixed record of the result. Depending on the guest, it holds state roots, the block hash, gas used or a validation flag.
-4. Proof. The zkVM proves the run. The proof ties the public values to one guest ELF through that ELF's verifying key.
+1. The host fetches a block and its execution witness from a node and packs them into one input buffer for the guest. On the ERE path, the harness passes a fixture's `statelessInputBytes` through unchanged instead.
+2. The zkVM runs the guest on that input. The guest anchors the pre-state to the parent header's state root and runs every transaction. Then it checks the header's state root and gas used against the run.
+3. The guest commits a short, fixed record of the result as its public values. Depending on the guest, that record holds state roots, the block hash, gas used or a validation flag.
+4. The zkVM proves the run. The proof ties the public values to one guest ELF through that ELF's verifying key.
 
-[Witness formats](./witness-formats.md) describes the inputs. [Proof guarantees](./proof-guarantees.md) lists each guest's public values and what a proof leaves out.
+[Witness formats](./witness-formats.md) describes the inputs, and [Proof guarantees](./proof-guarantees.md) lists each guest's public values and what a proof leaves out.
 
 ## Host and guest
 
-Each zkVM integration has two programs.
+Each zkVM integration has two programs, a host and a guest. The host is Rust, under `prover/prover_*`, and it runs natively. It fetches blocks over JSON-RPC, builds the input and drives the zkVM. In service mode it can also post proofs to Ethproofs.
 
-- The host is Rust, under `prover/prover_*`. It runs natively. It fetches blocks over JSON-RPC, builds the input and drives the zkVM. In service mode it can also post proofs to Ethproofs.
-- The guest is a bare-metal RISC-V program, under `prover/guest_*`. It reads the input, calls the C++ core and commits the public values. No operating system runs underneath it.
+The guest is a bare-metal RISC-V program under `prover/guest_*`, with no operating system running underneath it. All it does is read the input, call the C++ core and commit the public values.
 
-The core, `zilk_core`, is one C++23 library. It started as a fork of Silkworm's core: execution, state, protocol rules, trie, RLP and types. It builds natively for development and tests. For each zkVM it is cross-compiled into that zkVM's guest with the xPack `riscv-none-elf-gcc` toolchain.
+That core, `zilk_core`, is one C++23 library. It started as a fork of Silkworm's core, covering execution, state, protocol rules, trie, RLP and types. You can build it natively for development and tests, and for each zkVM it is cross-compiled into that zkVM's guest with the xPack `riscv-none-elf-gcc` toolchain.
 
-The Hypercube host embeds its guest ELF at compile time. `prover/prover_hypercube/build.rs` points `include_elf!` at the ELF that `make z6m_guest` builds. The Airbender host loads its guest image from the path in `--guest-bin`. Both hosts also link C++ code directly. Their fetcher converts a node's witness to MFBD through the `prover/witness_ffi` bridge.
+The two shipped hosts find their guest in different ways. The Hypercube host embeds its guest ELF at compile time, since `prover/prover_hypercube/build.rs` points `include_elf!` at the ELF that `make z6m_guest` builds. The Airbender host loads its guest image from the path in `--guest-bin`. Both hosts also link C++ code directly: their fetcher converts a node's witness to MFBD through the `prover/witness_ffi` bridge.
 
 ## Transaction execution with evmone
 
-Zilkworm embeds evmone to execute transactions. Its fork, ZVM1, lives in `third_party/evmone`. The Zilkworm core handles blocks, the witness, state and the trie. It calls evmone once per transaction. evmone is one component of the guest, not the guest itself.
+Zilkworm embeds evmone to execute transactions, and its fork, ZVM1, lives in `third_party/evmone`. The split is simple. The Zilkworm core handles blocks, the witness, state and the trie, and it calls evmone once per transaction. So evmone is one component of the guest, not the guest itself.
 
-The zkVM-specific acceleration for hashing and curve math sits mostly in evmone's precompile code. [Precompiles and syscalls](./precompiles-and-syscalls.md) lists it per zkVM.
+Most of the zkVM-specific acceleration for hashing and curve math sits in evmone's precompile code. [Precompiles and syscalls](./precompiles-and-syscalls.md) lists it per zkVM.
 
 ## Guest targets
 
@@ -648,15 +664,19 @@ Each zkVM gets its own guest build, and the zkVM sets the ISA.
 | Airbender guest | `prover/guest_airbender`, `make z6m_guest_airbender` | `rv32im_zicsr` | MFBD, EJSN |
 | ZisK guest, draft PR #86 | `prover/guest_zisk`, `make z6m_guest_zisk` | `rv64im_zicsr_zba_zbb_zbs_zbkb` | MFBD, EJSN |
 
-Airbender's proving machine has only the unsigned multiply and divide instructions. Its guest therefore avoids `mulh`, `mulhsu`, `div` and `rem`. A post-link check, `prover/guest_airbender/cmake/check_unsigned_muldiv.cmake`, guards this in the build.
+Airbender's proving machine has only the unsigned multiply and divide instructions, so its guest avoids `mulh`, `mulhsu`, `div` and `rem`. A post-link check, `prover/guest_airbender/cmake/check_unsigned_muldiv.cmake`, guards this in the build.
 
-The ZisK guest exists only on [PR #86](https://github.com/erigontech/zilkworm/pull/86), a draft based on alpha.6. No release ships it.
+The ZisK guest exists only on [PR #86](https://github.com/erigontech/zilkworm/pull/86), a draft based on alpha.6, and no release ships it.
 
 ## DirectState and HashState
 
-DirectState is the default state backend. It reads an MFBD bundle in place: accounts, storage, code and trie nodes sit in flat sections the guest does not decode. The run takes the pre-state root from the parent header that the first block names. When the block ends, the trie fold binds each touched key's pre-value to that root and recomputes the post-state root. That root must match the header. The Hypercube MFBD guest, the Airbender and ZisK guests and the native runner all use DirectState.
+Zilkworm has two state backends, and the backend decides which input a guest takes.
 
-HashState takes the EIP-8025 `statelessInputBytes` unchanged. It walks each trie path from the parent state root at the moment of the read, so every read is checked against that root. A read the witness cannot confirm, as a value or as a proven absence, rejects the block. After the run, the guest folds the block's writes over the parent root and accepts only on a matching root. The backend is fixed at compile time with `-DZ6M_HASH_STATE=ON`, with no runtime switch. The HashState build is the ERE guest, released as `stateless-validator-zilkworm-sp1-<SP1 version>.elf`.
+DirectState is the default. It reads an MFBD bundle in place: accounts, storage, code and trie nodes sit in flat sections the guest does not decode. The run takes the pre-state root from the parent header that the first block names. When the block ends, the trie fold binds each touched key's pre-value to that root and recomputes the post-state root, which must match the header. The Hypercube MFBD guest, the Airbender and ZisK guests and the native runner all use DirectState.
+
+HashState takes the EIP-8025 `statelessInputBytes` unchanged and checks as it goes. It walks each trie path from the parent state root at the moment of the read, so every read is checked against that root. If the witness can't confirm a read, either as a value or as a proven absence, the block is rejected. After the run, the guest folds the block's writes over the parent root and accepts only on a matching root.
+
+The backend is fixed at compile time with `-DZ6M_HASH_STATE=ON`, and there is no runtime switch. That HashState build is the ERE guest, released as `stateless-validator-zilkworm-sp1-<SP1 version>.elf`.
 
 ## Further reading
 
@@ -675,21 +695,23 @@ _Guests read MFBD bundles, raw SSZ statelessInputBytes or EJSN-wrapped test fixt
 
 # Witness formats
 
-A stateless run needs the block and the part of the state it touches. The host hands the guest one byte buffer that holds all of it. The guest reads the first bytes of that buffer to pick a path.
+This page shows you the three input formats a guest reads, how a guest tells them apart, and which tools produce each one.
+
+A stateless run needs the block and the part of the state it touches. The host hands the guest all of it in one byte buffer, and the guest reads the first bytes of that buffer to pick a path.
 
 ## MFBD bundles
 
-An MFBD file is a 16-byte envelope followed by one or more flat bundles. The envelope is `<u32 magic><u32 version><u64 count>`, with magic `MFBD` (`0x4442464D`) and version 1. Each bundle starts with a 56-byte header, magic `FBND` (`0x444E4246`). The header points at six sections. They hold the genesis block, the blocks to run, the ancestor headers, the pre-state, the trie nodes and the network name. The guest reads each section where it lies instead of decoding it.
+An MFBD file is a 16-byte envelope followed by one or more flat bundles. The envelope is `<u32 magic><u32 version><u64 count>`, with magic `MFBD` (`0x4442464D`) and version 1. Each bundle then starts with a 56-byte header, magic `FBND` (`0x444E4246`), which points at six sections. Those hold the genesis block, the blocks to run, the ancestor headers, the pre-state, the trie nodes and the network name. The guest reads each section where it lies instead of decoding it.
 
-The bundle version is `kFlatBundleVersion` in `zilk_core/core/types_zz/flat_bundle.hpp`, now 14. `load_flat_bundle` rejects any other version, so a stale bundle fails at once.
+The bundle version is `kFlatBundleVersion` in `zilk_core/core/types_zz/flat_bundle.hpp`, now 14. `load_flat_bundle` rejects any other version, so a stale bundle fails right away.
 
 ## Raw statelessInputBytes
 
-The HashState guest takes the EIP-8025 `statelessInputBytes`, the SSZ `StatelessInput` that tests-zkevm fixtures carry. It needs no wrapper. Its first two bytes are the schema id `0x1501`, big-endian, so the buffer starts `0x15 0x01`. No other input magic starts with `0x15`.
+The HashState guest takes the EIP-8025 `statelessInputBytes`, the SSZ `StatelessInput` that tests-zkevm fixtures carry, with no wrapper. Its first two bytes are the schema id `0x1501`, big-endian, so the buffer starts `0x15 0x01`. That keeps it easy to spot, because no other input magic starts with `0x15`.
 
 ## EJSN test fixtures
 
-EJSN wraps one EEST `blockchain_test` JSON fixture for a guest. The 8-byte header holds the magic `EJSN` (`0x4E534A45`) and version 1. The minified JSON follows. The hosts wrap a fixture this way when given `--is-test`, and the native runner wraps `.json` files itself. Under HashState, the guest reads each block's `statelessInputBytes` field from that JSON.
+EJSN wraps one EEST `blockchain_test` JSON fixture for a guest. Its 8-byte header holds the magic `EJSN` (`0x4E534A45`) and version 1, and the minified JSON follows. The hosts wrap a fixture this way when you pass `--is-test`, and the native runner wraps `.json` files itself. Under HashState, the guest reads each block's `statelessInputBytes` field from that JSON.
 
 ## Producers and consumers
 
@@ -700,7 +722,7 @@ EJSN wraps one EEST `blockchain_test` JSON fixture for a guest. The 8-byte heade
 | EJSN | `EJSN` v1, 8-byte header | `z6m_prover --is-test`, `z6m_prover_airbender --is-test`, the native runner | Every guest, and native `state_transition` |
 | Legacy unified RLP | None | The old fetcher | `legacy_to_flat_bundle` only |
 
-The three CLIs live in `zilk_core/dev/cli`. `json_witness_to_flat_bundle` converts a node's `debug_executionWitness` JSON, and the host links the same converter. `eest_to_flat_bundle` converts EEST fixtures with `emit` or `bulk-convert`. `legacy_to_flat_bundle` converts old `unifiedBlockAndStateRlp<N>.bin` files.
+The three CLIs live in `zilk_core/dev/cli`. `json_witness_to_flat_bundle` converts a node's `debug_executionWitness` JSON, and the host links the same converter. `eest_to_flat_bundle` converts EEST fixtures with `emit` or `bulk-convert`, and `legacy_to_flat_bundle` converts old `unifiedBlockAndStateRlp<N>.bin` files.
 
 ## Formats each guest accepts
 
@@ -714,11 +736,11 @@ The three CLIs live in `zilk_core/dev/cli`. `json_witness_to_flat_bundle` conver
 
 ## Legacy unified RLP
 
-`unifiedBlockAndStateRlp<N>.bin` files carry no magic, and no current guest reads them. They matter in two places. `legacy_to_flat_bundle` converts them to MFBD, and `make sp1-benchmark-corpus` runs that conversion. The Airbender host also falls back to that file name when a block has no `.mfbd` file, so convert old data first.
+`unifiedBlockAndStateRlp<N>.bin` files carry no magic, and no current guest reads them. They still matter in two places. `legacy_to_flat_bundle` converts them to MFBD, and `make sp1-benchmark-corpus` runs that conversion. The Airbender host also falls back to that file name when a block has no `.mfbd` file, so convert old data first.
 
 ## Spec documents
 
-The MFBD spec, `docs/mfbd_design_specs.md`, is normative. It says what a producer and a verifier must check. `docs/flat_witness_bundle.md` is the byte-layout reference. One diagram in the spec still says `FBND` v13; its section 4.2 and the code say 14.
+The MFBD spec, `docs/mfbd_design_specs.md`, is normative: it says what a producer and a verifier must check. `docs/flat_witness_bundle.md` is the byte-layout reference. One diagram in the spec still says `FBND` v13, but its section 4.2 and the code say 14.
 
 ## Further reading
 
@@ -737,11 +759,13 @@ _Each guest hands hashing and big-number math to its zkVM's circuits, through SP
 
 # Precompiles and syscalls
 
-Hashing and curve math take many RISC-V instructions. A zkVM proves every instruction it runs, so plain code for these routines makes a long trace. Each zkVM offers dedicated circuits for them instead. The guest reaches a circuit through an `ecall` on SP1, or a CSR access on Airbender and ZisK. Each such call replaces a software routine the prover would otherwise trace cycle by cycle.
+This page shows you where each guest hands work to its zkVM's dedicated circuits, which call reaches which circuit, and what stays in plain RISC-V code.
+
+Hashing and curve math take many RISC-V instructions, and a zkVM proves every instruction it runs, so plain code for these routines makes a long trace. That is why each zkVM offers dedicated circuits for them. The guest reaches a circuit through an `ecall` on SP1, or through a CSR access on Airbender and ZisK. Each such call replaces a software routine the prover would otherwise trace cycle by cycle.
 
 ## SP1 ecalls
 
-Both Hypercube guests declare their ecalls in `prover/guest_hypercube/src/include/sp1_syscalls.hpp`. Most wrappers are always inlined and compile to a single `ecall`. Most call sites sit in ZVM1, the evmone fork in `third_party/evmone`.
+Both Hypercube guests declare their ecalls in `prover/guest_hypercube/src/include/sp1_syscalls.hpp`. Most wrappers are always inlined and compile to a single `ecall`, and most call sites sit in ZVM1, the evmone fork in `third_party/evmone`.
 
 | Ecalls | Called from | Used for |
 |---|---|---|
@@ -753,13 +777,13 @@ Both Hypercube guests declare their ecalls in `prover/guest_hypercube/src/includ
 | `bn254_add`, `bn254_double` | evmone's precompile dispatch, `test/state/precompiles.cpp` | Point math for ECADD and ECMUL |
 | `bls12381_fp_*mod`, `bls12381_fp2_*mod` | `cmake/patch_blst_sp1.sh`, a build-time patch of blst | The BLS12-381 precompiles and KZG point evaluation |
 
-The header also declares ecalls that nothing in the guest calls at the current ZVM1 pin. They are the secp256r1 and ed25519 point ecalls, `bls12381_add` and `bls12381_double`, `u256x2048_mul`, and the two `uint256_*_with_carry` calls.
+The header also declares ecalls that nothing in the guest calls at the current ZVM1 pin. Those are the secp256r1 and ed25519 point ecalls, `bls12381_add` and `bls12381_double`, `u256x2048_mul`, and the two `uint256_*_with_carry` calls.
 
-The guest commits public values by writing to file descriptor 13, `SP1_FD_PUBLIC_VALUES`. The runtime in `prover/guest_hypercube/src/sp1_runtime.cpp` buffers those bytes. At halt it hashes them with SHA-256 and commits the digest.
+Public values take a different route. The guest commits them by writing to file descriptor 13, `SP1_FD_PUBLIC_VALUES`, and the runtime in `prover/guest_hypercube/src/sp1_runtime.cpp` buffers those bytes. At halt it hashes them with SHA-256 and commits the digest.
 
 ## Airbender CSRs
 
-The Airbender guest reaches its delegation circuits by writing to CSRs. `prover/guest_airbender/src/include/airbender_csr.hpp` names them.
+The Airbender guest reaches its delegation circuits by writing to CSRs, which `prover/guest_airbender/src/include/airbender_csr.hpp` names.
 
 | CSR | Name | Use in the guest |
 |---|---|---|
@@ -780,11 +804,11 @@ The curve and scalar logic around these calls stays RISC-V code in ZVM1. The alp
 | P256VERIFY | BigInt | evmone's generic Montgomery field template |
 | KECCAK256, and every hash the guest computes | keccak_f1600 | One delegation run per permutation |
 
-The EVM's own 256-bit add, subtract and multiply, and its 32-byte copies, also run on BigInt.
+BigInt also carries the EVM's own 256-bit add, subtract and multiply, along with its 32-byte copies.
 
 ## ZisK CSRs on PR #86
 
-The ZisK guest exists only on [draft PR #86](https://github.com/erigontech/zilkworm/pull/86). It calls ZisK's CSR precompiles, in the range `0x800` to `0x819`. Its `memcpy`, `memmove`, `memset` and `memcmp` go to ZisK's DMA precompiles.
+The ZisK guest exists only on [draft PR #86](https://github.com/erigontech/zilkworm/pull/86). It calls ZisK's CSR precompiles, in the range `0x800` to `0x819`, and its `memcpy`, `memmove`, `memset` and `memcmp` go to ZisK's DMA precompiles.
 
 | Area | ZisK precompiles |
 |---|---|
@@ -801,7 +825,7 @@ The ZisK guest exists only on [draft PR #86](https://github.com/erigontech/zilkw
 
 RIPEMD160, IDENTITY and MODEXP with operands over 32 bytes stay in software. DIV, SDIV and SMOD use a division hint that the guest checks.
 
-A hint, or fcall, returns a value the prover supplies freely. So the guest checks every hint before it uses the result. A bad inverse, square-root or division hint halts the run with an error, and no proof can exist. A bad GLV-split hint is the one exception. The guest then falls back to the software split, which needs no hint.
+Hints deserve a closer look. A hint, or fcall, returns a value the prover supplies freely, so the guest checks every hint before it uses the result. A bad inverse, square-root or division hint halts the run with an error, and no proof can exist. The one exception is a bad GLV-split hint: the guest just falls back to the software split, which needs no hint.
 
 ## Further reading
 
@@ -819,13 +843,15 @@ _Each guest commits a fixed public-values layout, each host checks it to a diffe
 
 # Proof guarantees
 
-A proof says that one guest ELF ran on some input and committed some public values. The verifying key names the ELF. The public values say what the run found. What a consumer can trust depends on both, and on what the host checks.
+This page tells you what a Zilkworm proof lets you trust, guest by guest, and what you still have to check yourself.
+
+A proof says that one guest ELF ran on some input and committed some public values. The verifying key names the ELF, and the public values say what the run found. What you can trust depends on both, and on how much the host checks.
 
 ## Public values per guest
 
 ### Hypercube MFBD guest, 112 bytes
 
-The Hypercube MFBD guest commits 112 bytes. A release publishes it as `z6m_guest_hypercube_mfbd`.
+A release publishes this guest as `z6m_guest_hypercube_mfbd`, and it commits 112 bytes.
 
 | Offset | Bytes | Field | Meaning |
 |---|---|---|---|
@@ -839,7 +865,7 @@ The ZisK guest on draft PR #86 commits the same 112 bytes, in ZisK output slots 
 
 ### HashState guest, 43 bytes
 
-On `statelessInputBytes` input, the HashState guest commits the SSZ `StatelessValidationResult`. This is the ERE guest, `stateless-validator-zilkworm-sp1-<SP1 version>`.
+The HashState guest is the ERE guest, `stateless-validator-zilkworm-sp1-<SP1 version>`. On `statelessInputBytes` input, it commits the SSZ `StatelessValidationResult`.
 
 | Offset | Bytes | Field | Meaning |
 |---|---|---|---|
@@ -848,41 +874,39 @@ On `statelessInputBytes` input, the HashState guest commits the SSZ `StatelessVa
 | 33 | 8 | `chain_id` | The chain ID, little-endian |
 | 41 | 2 | `schema_id` | The input schema id, little-endian |
 
-A rejected block still yields a result, with `successful_validation` set to 0. Only an input that does not decode gives the all-zero result. On EJSN input, the same guest writes the 112-byte layout above.
+A rejected block still yields a result, with `successful_validation` set to 0. Only an input that does not decode gives the all-zero result. On EJSN input, the same guest writes the 112-byte layout above instead.
 
 ### Airbender guest, 32 bytes
 
-The Airbender guest commits the hash of the last block it validated. It writes the hash's bytes in order, as little-endian words, to registers `a0` to `a7`. The hash binds the parent's state root and the block's post-state root, gas used and receipts root.
+The Airbender guest commits the hash of the last block it validated. It writes the hash's bytes in order, as little-endian words, to registers `a0` to `a7`. Small as it is, that hash binds the parent's state root and the block's post-state root, gas used and receipts root.
 
-The value is zero when the run validated no block. That happens on an EJSN success, or on an MFBD whose every block is flagged expected-invalid. A failed or skipped run ends at `finish_error` and commits nothing, so it cannot be proven.
+The value is zero when the run validated no block, which happens on an EJSN success or on an MFBD whose every block is flagged expected-invalid. A failed or skipped run ends at `finish_error` and commits nothing, so it cannot be proven.
 
 ## Checks inside the guest
 
-Before a DirectState guest commits, it checks the chain it ran:
+Before a DirectState guest commits, it checks the chain it ran. It takes the pre-state root from the parent header that the first block names and requires each later block to extend the one before it. It also checks each header's state root and gas used against the run.
 
-- It takes the pre-state root from the parent header that the first block names.
-- It requires each later block to extend the one before it.
-- It checks each header's state root and gas used against the run.
+An MFBD envelope can hold several bundles, each its own chain. In that case the public values cover only the last validated block's bundle.
 
-An MFBD envelope can hold several bundles, each its own chain. The public values then cover the last validated block's bundle only.
-
-The HashState guest checks that the witness headers chain by parent hash and end at the block's parent. Every account and storage read is checked against the parent state root. The guest rejects the block on a read it cannot confirm, or on a malformed witness. It accepts the block only if the folded post-state root matches the header.
+The HashState guest checks that the witness headers chain by parent hash and end at the block's parent. Every account and storage read is checked against the parent state root. The guest rejects the block on a read it cannot confirm, or on a malformed witness, and it accepts the block only if the folded post-state root matches the header.
 
 ## Checks in each host
 
-The hosts check the public values to different degrees.
+The hosts check the public values to very different degrees:
 
-- The Airbender host derives the expected block hash from the input. It fails `execute`, `prove`, `verify`, `--test-service` and `--service` when the guest commits another.
-- The Hypercube host parses the 112 bytes and logs them. It does not compare them with the input or with a node.
-- The ERE harness, ere-hosts, compares the 43 bytes with the fixture's `statelessOutputBytes`. It records the result as `output_matched`.
+- The Airbender host derives the expected block hash from the input. When the guest commits another, it fails `execute`, `prove`, `verify`, `--test-service` and `--service`.
+- The Hypercube host parses the 112 bytes and logs them, but it does not compare them with the input or with a node.
+- The ERE harness, ere-hosts, compares the 43 bytes with the fixture's `statelessOutputBytes` and records the result as `output_matched`.
 
-A consumer that needs a Hypercube proof to match the chain compares `block_hash` and `post_state_root` with a node itself.
+So if you need a Hypercube proof to match the chain, compare `block_hash` and `post_state_root` with a node yourself.
 
 ## Keys and guest builds
 
-The verifying key is derived from the guest ELF, so a new guest build gets a new key. Each release publishes the key of each guest next to the guest. Build flags count too. The Hypercube MFBD guest is built with `USE_HASH_KEY=OFF` and the Airbender guest with `USE_HASH_KEY=ON`, and the key depends on that flag. The Airbender key also depends on the recursion verifier programs. Its prover accepts only their default `RECURSION_*_BLAKE` modes.
+The verifying key is derived from the guest ELF, so every new guest build gets a new key. Each release publishes the key of each guest right next to the guest.
 
-A zkVM update can rotate keys without any guest change. SP1 v6.9.0 loads a guest's initial memory differently from v6.6.0. SP1 keys published for alpha.6 therefore do not verify alpha.7 proofs. In the same release, a DirectState runner fix changed the MFBD and Airbender keys but not the ERE guest's key.
+Build flags count too. The Hypercube MFBD guest is built with `USE_HASH_KEY=OFF` and the Airbender guest with `USE_HASH_KEY=ON`, and the key depends on that flag. The Airbender key also depends on the recursion verifier programs, and its prover accepts only their default `RECURSION_*_BLAKE` modes.
+
+Keys can also rotate without any guest change, when the zkVM itself moves. SP1 v6.9.0 loads a guest's initial memory differently from v6.6.0, so SP1 keys published for alpha.6 do not verify alpha.7 proofs. In the same release, a DirectState runner fix changed the MFBD and Airbender keys but left the ERE guest's key alone.
 
 :::warning
 Verify a proof with the key from the release that built its guest. Keys can change between releases even when the guest code does not.
@@ -890,11 +914,11 @@ Verify a proof with the key from the release that built its guest. Keys can chan
 
 ## Out of scope
 
-A proof covers execution of the input it was given. It does not cover:
+A proof covers execution of the input it was given, and nothing more. It does not cover:
 
-- Consensus validity. The proof does not say the block is canonical or attested.
-- Blob availability. The guest never sees blob data, so the proof does not say the blobs were published.
-- The parent header's origin. The guest anchors to the parent header in its input. A verifier checks the committed roots or block hash against a trusted node.
+- Consensus validity. Nothing in the proof says the block is canonical or attested.
+- Blob availability. The guest never sees blob data, so the proof cannot say the blobs were published.
+- The parent header's origin. The guest anchors to the parent header in its input, so a verifier checks the committed roots or block hash against a trusted node.
 
 ## Further reading
 
@@ -913,23 +937,25 @@ _Zilkworm runs the Ethereum execution spec tests natively and inside the Hypercu
 
 # Execution spec tests
 
-The Ethereum Execution Spec Tests, or EESTs, are the test vectors for the Ethereum execution layer. They are generated from the execution specs and cover every fork and many edge cases. A failing test usually points to a consensus bug. The fixtures ship as releases of [ethereum/execution-specs](https://github.com/ethereum/execution-specs/releases), and the docs live at [eest.ethereum.org](https://eest.ethereum.org/). CI runs them natively and inside two zkVMs.
+By the end of this page you can run the Ethereum execution spec tests against Zilkworm yourself. You will also know how CI runs them inside the zkVMs.
+
+The Ethereum Execution Spec Tests, or EESTs, are the test vectors for the Ethereum execution layer. They are generated from the execution specs and cover every fork plus many edge cases, so a failing test usually points to a consensus bug. The fixtures ship as releases of [ethereum/execution-specs](https://github.com/ethereum/execution-specs/releases), and the docs live at [eest.ethereum.org](https://eest.ethereum.org/). CI runs them natively and inside two zkVMs.
 
 ## Fixture pins
 
-The fixtures come from release tarballs, pinned by checksum. The manifest `test-fixtures.json` names each tarball's URL, sha256, size and the paths to extract. It has one entry, `eest_stable`. That entry pins `tests@v21.0.1`, sha256 `b9b14391ed1a625e4ca9a058c055d0eacd98a42b76c7a6127c640cdc2d3c9439`, and extracts `fixtures/blockchain_tests`.
+The fixtures come from release tarballs, pinned by checksum. A manifest, `test-fixtures.json`, names each tarball's URL, sha256 and size, along with the paths to extract. It has one entry, `eest_stable`, which pins `tests@v21.0.1` with sha256 `b9b14391ed1a625e4ca9a058c055d0eacd98a42b76c7a6127c640cdc2d3c9439` and extracts `fixtures/blockchain_tests`. You fetch them with one command:
 
 ```bash
 make test-fixtures
 ```
 
-This runs `tools/test-fixtures.sh`. It downloads each tarball, checks its sha256 and extracts it into `test-fixtures-cache/<key>/`. A rerun does nothing while the pin matches. To move a pin, edit `test-fixtures.json`.
+This runs `tools/test-fixtures.sh`, which downloads each tarball, checks its sha256 and extracts it into `test-fixtures-cache/<key>/`. A rerun does nothing while the pin matches. To move a pin, edit `test-fixtures.json`.
 
-The HashState suite uses a second release, `tests-zkevm@v21.0.6`. The Makefile downloads it with `gh release download`, so it is not checksum-pinned.
+The HashState suite is the exception. It uses a second release, `tests-zkevm@v21.0.6`, which the Makefile downloads with `gh release download`, so that one is not checksum-pinned.
 
 ## Native run
 
-`make eest-blockchain-tests` needs CMake, Ninja, ctest, a C++23 compiler, Git, Python 3, curl and tar. It needs no Rust. Rust is needed only for the targets that build `z6m_prover`, such as `selftest` and `eest-prover-test`. [Building from source](../reference/building-from-source.md) lists the toolchain.
+To run `make eest-blockchain-tests` you need CMake, Ninja, ctest, a C++23 compiler, Git, Python 3, curl and tar. You do not need Rust for it. Only the targets that build `z6m_prover`, such as `selftest` and `eest-prover-test`, need Rust. [Building from source](../reference/building-from-source.md) lists the toolchain.
 
 ```bash
 git clone https://github.com/erigontech/zilkworm
@@ -938,7 +964,7 @@ git submodule update --init --recursive
 make eest-blockchain-tests
 ```
 
-The target fetches the pinned tarball. It converts every JSON fixture to MFBD with `eest_to_flat_bundle bulk-convert`. The converted set lands in `test-fixtures-cache/mfbd-<sha>/`, named after the pin. A rerun skips the fetch and the conversion while the pin and the converter binary stay the same. The target then builds with `-DBUILD_TESTING=ON` and runs `ctest --parallel`, one case per fixture file.
+The target first fetches the pinned tarball and converts every JSON fixture to MFBD with `eest_to_flat_bundle bulk-convert`. The converted set lands in `test-fixtures-cache/mfbd-<sha>/`, named after the pin. A rerun skips the fetch and the conversion as long as the pin and the converter binary stay the same. Then the target builds with `-DBUILD_TESTING=ON` and runs `ctest --parallel`, one case per fixture file.
 
 ## Make targets
 
@@ -952,32 +978,29 @@ The target fetches the pinned tarball. It converts every JSON fixture to MFBD wi
 | `make eest-prover-test-json` | Runs the JSON fixtures through `z6m_prover --test-service` |
 | `make eest-zkevm-tests` | Runs the `tests-zkevm@v21.0.6` fixtures through a native HashState build in `build/zkevm` |
 
-`make tests` and `make tests-json` are broken: they pass `--execution-log-dir`, a flag `z6m_prover` does not have.
+Skip `make tests` and `make tests-json`. Both are broken, because they pass `--execution-log-dir`, a flag `z6m_prover` does not have.
 
 ## Runs inside the zkVMs
 
-CI also runs the pinned set inside the guests.
+CI also runs the pinned set inside the guests, in two workflows. The HyperCube EEST Blockchain Tests workflow builds `z6m_prover` and runs the MFBD set through `tools/scripts/eest_runner.py` under the SP1 executor; that job fails above a set failure threshold. The Airbender EEST Blockchain Tests workflow builds the Airbender guest and host, then runs `make eest` in `prover/prover_airbender`. It fails only on failures outside the known-failures lists.
 
-- The HyperCube EEST Blockchain Tests workflow builds `z6m_prover`. It runs the MFBD set through `tools/scripts/eest_runner.py` under the SP1 executor. The job fails above a set failure threshold.
-- The Airbender EEST Blockchain Tests workflow builds the Airbender guest and host. It runs `make eest` in `prover/prover_airbender`. The job fails only on failures outside the known-failures lists.
-
-The native suite runs in the EEST Blockchain Tests workflow. The QEMU runs are on [RISC-V tests under QEMU](./riscv-tests-under-qemu.md).
+The native suite has its own workflow, EEST Blockchain Tests. The QEMU runs have a page of their own, [RISC-V tests under QEMU](./riscv-tests-under-qemu.md).
 
 ## Known failures
 
-`zilk_core/dev/eest-known-failures.txt` lists fixtures that the runner gets wrong on every target. Their ctests are registered `WILL_FAIL`, so a listed fixture that passes again fails until it comes off the list. As of v0.1.0-alpha.7 the list holds only its header, so the native suite expects no failures.
+Two files track the fixtures that are expected to fail. The first, `zilk_core/dev/eest-known-failures.txt`, lists fixtures that the runner gets wrong on every target. Their ctests are registered `WILL_FAIL`, so a listed fixture that passes again shows up as a failure until you take it off the list. As of v0.1.0-alpha.7 that list holds only its header, which means the native suite expects no failures.
 
-`prover/prover_airbender/eest-known-failures.txt` lists 25 fixtures that the Airbender guest does not finish. They hit resource limits such as the execution cycle cap; they are not wrong results. The Airbender job adds the native list to its own.
+The second, `prover/prover_airbender/eest-known-failures.txt`, lists 25 fixtures that the Airbender guest does not finish. These are not wrong results. They hit resource limits such as the execution cycle cap. The Airbender job adds the native list to its own.
 
 ## State-root check before a release
 
-Before a release, `tools/scripts/release_state_root_check.sh` re-runs a directory of mainnet blocks natively. It builds `state_transition` in Release mode. It then runs every `<dir>/<N>/flatWitnessBundle<N>.mfbd` file in parallel. It reports each block whose output shows `ERROR: State Root Mismatch`, each timeout and each non-zero exit.
+Before a release, you re-run a directory of mainnet blocks natively with `tools/scripts/release_state_root_check.sh`. The script builds `state_transition` in Release mode and then runs every `<dir>/<N>/flatWitnessBundle<N>.mfbd` file in parallel. It reports each block whose output shows `ERROR: State Root Mismatch`, along with each timeout and each non-zero exit.
 
 ```bash
 tools/scripts/release_state_root_check.sh --dir <blocks-dir> -j "$(nproc)"
 ```
 
-`-s` and `-e` limit the block range. Logs go to `temp/release_state_root_check/` unless `-l` names another directory.
+Use `-s` and `-e` to limit the block range. Logs go to `temp/release_state_root_check/` unless you name another directory with `-l`.
 
 ## Further reading
 
@@ -996,7 +1019,9 @@ _The execution spec tests also run on bare-metal rv32im and rv64im builds of the
 
 # RISC-V tests under QEMU
 
-A test should run as close to the real target as it can. For Zilkworm, the real target is a bare-metal RISC-V guest inside a zkVM. The QEMU runner in `qemu_runner/` builds the core for rv32im or rv64im. It then runs every [execution spec test](./execution-spec-tests.md) fixture on it under QEMU.
+Here you will learn to run the spec tests on bare-metal RISC-V builds of the core, and what those runs catch that native runs miss.
+
+A test should run as close to the real target as it can, and for Zilkworm the real target is a bare-metal RISC-V guest inside a zkVM. The QEMU runner in `qemu_runner/` builds the core for rv32im or rv64im. It then runs every [execution spec test](./execution-spec-tests.md) fixture on that build under QEMU.
 
 ## Requirements
 
@@ -1007,7 +1032,7 @@ The QEMU suite uses the same pinned fixtures as the native suite, from `test-fix
 - QEMU's RISC-V system emulators, `qemu-system-misc` on Ubuntu
 - Node.js and npm, to install the cross-compiler
 
-Install [xPack's RISC-V toolchain](https://xpack-dev-tools.github.io/riscv-none-elf-gcc-xpack/docs/install/). CI uses version 15.2.0-1.1:
+Then install the cross-compiler, [xPack's RISC-V toolchain](https://xpack-dev-tools.github.io/riscv-none-elf-gcc-xpack/docs/install/). CI uses version 15.2.0-1.1:
 
 ```bash
 npm i -g xpm
@@ -1025,26 +1050,30 @@ cd zilkworm
 git submodule update --init --recursive
 ```
 
-Run the suite on rv32im:
+Then run the suite on rv32im:
 
 ```bash
 cd qemu_runner
 make eest-rv32
 ```
 
-The target fetches and converts the pinned fixtures, as the native suite does. It cross-compiles the core for rv32im and builds the test runner in `qemu_runner/build`. Then `ctest` starts one `qemu-system-riscv32` instance per fixture.
+Like the native suite, the target fetches and converts the pinned fixtures. It then cross-compiles the core for rv32im, builds the test runner in `qemu_runner/build`, and has `ctest` start one `qemu-system-riscv32` instance per fixture.
 
-`make eest-rv64` runs the same suite on rv64im, in `qemu_runner/build64`. `make rerun-ctest` runs ctest again with verbose output and a longer per-test timeout. Add `ARCH=rv64` to target rv64im. The QEMU ctests read the native known-failures list, `zilk_core/dev/eest-known-failures.txt`.
+For rv64im, run `make eest-rv64` instead; it builds in `qemu_runner/build64`. `make rerun-ctest` runs ctest again with verbose output and a longer per-test timeout, and you add `ARCH=rv64` to target rv64im. The QEMU ctests share the native known-failures list, `zilk_core/dev/eest-known-failures.txt`.
 
 ## CI workflows
 
-Two workflows run the suite: Qemu EESTs on RV32IM and Qemu EESTs on RV64IM. Each runs on pushes and pull requests to `main`, `master` and `release/*`. Each also runs on a cron every three days, and on demand. They use the `ghcr.io/erigontech/zilkworm-ci` image and add `qemu-system-misc`. Then they run `make xpack-elf-eest` and `make rerun-ctest`.
+In CI, two workflows run the suite: Qemu EESTs on RV32IM and Qemu EESTs on RV64IM. Each one runs on pushes and pull requests to `main`, `master` and `release/*`, on a cron every three days, and on demand. Both start from the `ghcr.io/erigontech/zilkworm-ci` image and add `qemu-system-misc`. Then they run `make xpack-elf-eest` and `make rerun-ctest`.
 
 ## Bugs that cross-architecture runs catch
 
-The native suite catches logic and spec errors quickly. The QEMU runs catch bugs that stay hidden on a 64-bit x86 host. On rv32, `size_t`, `uintptr_t` and `long` are 32 bits wide, so truncation and overflow in size math show up. Alignment and struct-layout assumptions can break. `rv32im` has no atomics and no floating point, so an accidental use of either pulls in library code or breaks the link. A path that is cheap on x86_64 can also turn out costly in instructions on rv32, and in a zkVM every instruction is proven. The QEMU build is plain `rv32im`, so it does not check Airbender's ban on signed multiply and divide. The Airbender guest's post-link check covers that.
+The native suite catches logic and spec errors quickly. The QEMU runs catch the bugs that stay hidden on a 64-bit x86 host.
 
-A test that fails on both native and QEMU usually has a logic or spec error. A test that fails only under QEMU points to a width, alignment or ISA issue.
+On rv32, `size_t`, `uintptr_t` and `long` are 32 bits wide, so truncation and overflow in size math show up. Alignment and struct-layout assumptions can break too. Because `rv32im` has no atomics and no floating point, an accidental use of either pulls in library code or breaks the link. Cost matters as well: a path that is cheap on x86_64 can turn out costly in instructions on rv32, and in a zkVM every instruction is proven.
+
+One check is left to the Airbender build. The QEMU build is plain `rv32im`, so it does not check Airbender's ban on signed multiply and divide; the Airbender guest's post-link check covers that.
+
+This gives you a quick way to read a failure. A test that fails both natively and under QEMU usually has a logic or spec error. One that fails only under QEMU points to a width, alignment or ISA issue.
 
 ## Further reading
 
@@ -1062,19 +1091,21 @@ _The HashState guest runs in the ERE harness, which checks its output against ea
 
 # ERE validation
 
+This page explains how Zilkworm's HashState guest is checked in the ERE harness, and how you can run the same check and cost estimate yourself.
+
 The zkEVM benchmark workload, [eth-act/zkevm-benchmark-workload](https://github.com/eth-act/zkevm-benchmark-workload), runs stateless-validator guests inside zkVMs through ERE, [eth-act/ere](https://github.com/eth-act/ere). Its `ere-hosts` tool runs a guest on each fixture. Zilkworm takes part as an execution client, with its HashState guest on SP1.
 
 ## The ERE guest
 
-The ERE guest is the HashState build of the Hypercube guest. `make z6m_guest_slib` builds it with `-DZ6M_HASH_STATE=ON`. It takes each fixture's `statelessInputBytes` unchanged, with no host adapter in between. [Witness formats](../inside-the-guest/witness-formats.md) describes that input.
+The ERE guest is the HashState build of the Hypercube guest, which `make z6m_guest_slib` builds with `-DZ6M_HASH_STATE=ON`. It takes each fixture's `statelessInputBytes` unchanged, with no host adapter in between. [Witness formats](../inside-the-guest/witness-formats.md) describes that input.
 
-Releases publish the guest as `stateless-validator-zilkworm-sp1-<version>.elf` and `.vk`. The name follows the ere-guests handbook pattern, `stateless-validator-<guest>-<zkVM>-<zkVM version>`. The version is the `sp1-sdk` tag that `derive_vk` builds against, read from `prover/stateless_validator/Cargo.toml`. For v0.1.0-alpha.7 the files are `stateless-validator-zilkworm-sp1-v6.9.0.elf` and `.vk`.
+Releases publish the guest as `stateless-validator-zilkworm-sp1-<version>.elf` and `.vk`, following the ere-guests handbook pattern `stateless-validator-<guest>-<zkVM>-<zkVM version>`. The version is the `sp1-sdk` tag that `derive_vk` builds against, read from `prover/stateless_validator/Cargo.toml`. For v0.1.0-alpha.7 that gives `stateless-validator-zilkworm-sp1-v6.9.0.elf` and `.vk`.
 
 ## Checks per fixture
 
-For each fixture, ere-hosts feeds the guest the fixture's `statelessInputBytes`. The guest commits the 43-byte `StatelessValidationResult`. ere-hosts compares those bytes with the fixture's `statelessOutputBytes` and records `output_matched`. A cost run does not prove. It asks SP1 for an estimate of the proving cost instead. `tools/ere_compare.py` turns the per-fixture records into tables.
+For each fixture, ere-hosts feeds the guest the fixture's `statelessInputBytes`, and the guest commits the 43-byte `StatelessValidationResult`. ere-hosts then compares those bytes with the fixture's `statelessOutputBytes` and records `output_matched`. [Proof guarantees](../inside-the-guest/proof-guarantees.md) gives the 43-byte layout.
 
-[Proof guarantees](../inside-the-guest/proof-guarantees.md) gives the 43-byte layout.
+A cost run works differently. It does not prove at all; it asks SP1 for an estimate of the proving cost instead. `tools/ere_compare.py` turns the per-fixture records into tables.
 
 ## Make targets
 
@@ -1086,15 +1117,15 @@ For each fixture, ere-hosts feeds the guest the fixture's `statelessInputBytes`.
 | `make ere-compare` | Runs `ere-cost`, then the same estimate for Reth's guest, and compares the two |
 | `make ere-fixtures` | Generates EEST fixtures with `witness-generator-cli`; runs first only when `ERE_GEN_FIXTURES` is set |
 
-The targets run `ere-hosts` inside a checkout of the benchmark workload, set by `ERE_WORKLOAD_DIR`. Every run passes `--force-rerun`, so no stale result from an older guest survives. `ERE_IMAGE_REGISTRY` points ERE at its prebuilt zkVM images on `ghcr.io/eth-act/ere`.
+The targets run `ere-hosts` inside a checkout of the benchmark workload, which you point to with `ERE_WORKLOAD_DIR`. Every run passes `--force-rerun`, so no stale result from an older guest survives. `ERE_IMAGE_REGISTRY` points ERE at its prebuilt zkVM images on `ghcr.io/eth-act/ere`.
 
-`ERE_BIN_PATH` names a local guest directory, such as `build/ere-bin`. When it is set, `ere-bin-link` links the files under the versioned name ere-hosts loads. It stops if the workload's SP1 version differs from the one `derive_vk` used. When `ERE_BIN_PATH` is empty, ere-hosts downloads the published guest.
+To test a guest you built yourself, set `ERE_BIN_PATH` to its directory, such as `build/ere-bin`. `ere-bin-link` then links the files under the versioned name ere-hosts loads, and stops if the workload's SP1 version differs from the one `derive_vk` used. Leave `ERE_BIN_PATH` empty and ere-hosts downloads the published guest instead.
 
 ## Local run
 
-A local run needs Rust and a container engine, since ere-hosts drives ERE's SP1 server in a container. `tools/ere-fetch-fixtures.sh` fetches stateless fixtures from a public Sepolia block catalog. It caches them under `test-fixtures-cache/ere-sepolia/`. `latest N` extracts the N latest batches to `latest/`.
+To run this locally you need Rust and a container engine, because ere-hosts drives ERE's SP1 server in a container. For inputs, `tools/ere-fetch-fixtures.sh` fetches stateless fixtures from a public Sepolia block catalog and caches them under `test-fixtures-cache/ere-sepolia/`. Its `latest N` form extracts the N latest batches to `latest/`.
 
-`ERE_WORKLOAD_DIR` must point at a workload checkout that has the `zilkworm` client. Today that is the `som/ere-v0.19.5` branch of the erigontech fork, which the first command clones. Run every command from the Zilkworm repository root.
+`ERE_WORKLOAD_DIR` must point at a workload checkout that has the `zilkworm` client. Today that means the `som/ere-v0.19.5` branch of the erigontech fork, which the first command below clones. Run every command from the Zilkworm repository root.
 
 ```bash
 git clone --branch som/ere-v0.19.5 https://github.com/erigontech/zkevm-benchmark-workload ../zkevm-benchmark-workload_fork
@@ -1106,23 +1137,21 @@ make ere-validate \
     ERE_INPUT_FOLDER=$(pwd)/test-fixtures-cache/ere-sepolia/latest
 ```
 
-Swap `ere-validate` for `ere-cost` or `ere-compare` to estimate cost with the same variables.
+To estimate cost instead, swap `ere-validate` for `ere-cost` or `ere-compare` and keep the same variables.
 
 ## ERE benchmark workflow
 
-`.github/workflows/ere-benchmark.yml` runs the same targets in CI. It runs on pushes to `release/*`, on demand, and when `release.yml` calls it after each `v*` release.
+In CI, `.github/workflows/ere-benchmark.yml` runs the same targets. It runs on pushes to `release/*`, on demand, and when `release.yml` calls it after each `v*` release.
 
-- Guest source. `build` runs `make ere-bin` at the run's ref. `release` downloads the release's ERE guest and checks it against `SHA256SUMS.txt`.
-- Fixtures. The job fetches the latest batches of the public Sepolia catalog, one batch by default.
-- Steps. It runs `ere-validate` and `ere-cost`, and `ere-compare` when the `compare` input is on.
-- Repositories. It uses the erigontech forks of zkevm-benchmark-workload and ere-guests, branch `som/ere-v0.19.5`. The forks carry the Zilkworm client until it is upstreamed.
-- Output. The step summary holds the result tables, and the run uploads the per-fixture records as the `ere-metrics` artifact.
+The guest can come from two sources. With `build`, the job runs `make ere-bin` at the run's ref; with `release`, it downloads the release's ERE guest and checks it against `SHA256SUMS.txt`. The job then fetches the latest batches of the public Sepolia catalog, one batch by default. It runs `ere-validate` and `ere-cost`, plus `ere-compare` when the `compare` input is on. The step summary holds the result tables, and the run uploads the per-fixture records as the `ere-metrics` artifact.
 
-`release.yml` calls the workflow with `compare: false`. Its comment says ere-guests had no Reth SP1 v6.9.0 guest yet. The alpha.7 release notes add that the fork registry has since taken one, so `make ere-compare` runs on the forks again.
+The workflow uses the erigontech forks of zkevm-benchmark-workload and ere-guests, on branch `som/ere-v0.19.5`. Those forks carry the Zilkworm client until it is upstreamed.
+
+`release.yml` calls the workflow with `compare: false`, because ere-guests had no Reth SP1 v6.9.0 guest yet. By alpha.7 the fork registry had taken one, so `make ere-compare` runs on the forks again.
 
 ## Results
 
-[Releases and assets](../reference/releases-and-assets.md) lists the published ERE results with their release tags. Each workflow run's summary holds its own tables.
+For the published ERE results and their release tags, see [Releases and assets](../reference/releases-and-assets.md). Each workflow run also keeps its own tables in its summary.
 
 ## Further reading
 
@@ -1141,11 +1170,13 @@ _Look up the flags, subcommands, environment variables and exit codes of the thr
 
 # CLI reference
 
-Zilkworm has three command-line tools. `z6m_prover` drives the SP1 Hypercube guest. `z6m_prover_airbender` drives the Airbender guest. `state_transition` runs a block natively, outside any zkVM. The facts below match `v0.1.0-alpha.7`.
+Use this page to look up a flag, subcommand, environment variable or exit code for any of Zilkworm's three command-line tools. Everything here matches `v0.1.0-alpha.7`.
+
+`z6m_prover` drives the SP1 Hypercube guest and `z6m_prover_airbender` drives the Airbender guest. The third tool, `state_transition`, runs a block natively, outside any zkVM.
 
 ## z6m_prover (Hypercube)
 
-The release ships this binary as `z6m_prover_hypercube`. `make z6m_prover` builds it at `prover/target/release/z6m_prover`. It has three forms:
+The release ships this binary as `z6m_prover_hypercube`, and `make z6m_prover` builds it at `prover/target/release/z6m_prover`. You can run it in three forms:
 
 ```bash
 z6m_prover --service [flags]         # fetch, execute and prove in a loop
@@ -1153,7 +1184,7 @@ z6m_prover --test-service [flags]    # execute downloaded blocks or EEST fixture
 z6m_prover <subcommand> [flags]      # fetch, execute, prove, setup or verify once
 ```
 
-With no mode and no subcommand it exits with an error. It loads a `.env` file from the working directory at startup.
+Given no mode and no subcommand, it exits with an error. At startup it loads a `.env` file from the working directory.
 
 ### Top-level flags
 
@@ -1187,32 +1218,32 @@ With no mode and no subcommand it exits with an error. It loads a `.env` file fr
 | `setup` | `--pk-path`, `--vk-path` | No-op. Nothing is written. |
 | `verify` | `--proof-path`, `--vk-path` | No-op. No verification runs. |
 
-`execute` and `prove` read `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`. With `--is-test` they read `ethTests<N>.json` as an EEST fixture. `--file-name` overrides the block-number lookup.
+By default, `execute` and `prove` read `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`. With `--is-test` they read `ethTests<N>.json` as an EEST fixture instead, and `--file-name` overrides the block-number lookup.
 
-`execute` prints `Executed block <N> (gas_used=..., cycles=..., prover_gas=..., syscall_count=...)`. It appends a line to `<data-dir>/executionLogs.log`. It exits 1 when `gas_used` is 0.
+When `execute` finishes, it prints `Executed block <N> (gas_used=..., cycles=..., prover_gas=..., syscall_count=...)` and appends a line to `<data-dir>/executionLogs.log`. It exits 1 when `gas_used` is 0.
 
-`--geth` exists only on `fetch`. The service always reads the reth and alloy witness shape.
+`--geth` exists only on `fetch`; the service always reads the reth and alloy witness shape.
 
-Limits of `prove` as of `v0.1.0-alpha.7`:
+Before you reach for `prove`, know its limits as of `v0.1.0-alpha.7`:
 
-- It always uses the CUDA prover in compressed mode. It ignores `SP1_PROVER` and `--proof-type`.
+- It always uses the CUDA prover in compressed mode, and ignores `SP1_PROVER` and `--proof-type`.
 - It discards the proof. Nothing is written to disk, and the summary line prints `gas_used=0` and an empty path.
-- A key setup failure prints `ERROR` and still exits 0. A proving failure is not reported.
+- A key setup failure prints `ERROR` but still exits 0, and a proving failure is not reported at all.
 - It never posts to Ethproofs.
 
-Use `--service` to get proof files.
+If you need proof files, use `--service`.
 
 ### Environment variables
 
-- `SP1_PROVER` selects the service-mode backend. Only `cuda` is special-cased, as the local GPU prover. Any other value, or none, gives the CPU prover. `execute` always uses the CPU, and `prove` always uses CUDA.
-- `NETWORK_PRIVATE_KEY` is listed in `.env.example` for the Succinct Prover Network. It is unused, because `network` and `mock` modes are not wired up.
-- `RUST_LOG` sets the log filter. It defaults to `warn`.
+- `SP1_PROVER` selects the service-mode backend. Only `cuda` is special-cased, as the local GPU prover; any other value, or none, gives you the CPU prover. `execute` always uses the CPU, and `prove` always uses CUDA.
+- `NETWORK_PRIVATE_KEY` appears in `.env.example` for the Succinct Prover Network, but nothing reads it, because `network` and `mock` modes are not wired up.
+- `RUST_LOG` sets the log filter, which defaults to `warn`.
 
-The Ethproofs settings are flags only. This binary reads no `ETHPROOFS_*` variables.
+For Ethproofs, pass the flags. This binary reads no `ETHPROOFS_*` variables.
 
 ## z6m_prover_airbender
 
-`make z6m_prover_airbender` builds it at `prover/prover_airbender/target/release/z6m_prover_airbender`. The image `ghcr.io/erigontech/zilkworm-airbender` ships it with the guest. It runs as `--service`, as `--test-service`, or with one subcommand.
+`make z6m_prover_airbender` builds this one at `prover/prover_airbender/target/release/z6m_prover_airbender`, and the image `ghcr.io/erigontech/zilkworm-airbender` ships it together with the guest. Like the Hypercube host, it runs as `--service`, as `--test-service`, or with one subcommand.
 
 ### Top-level flags
 
@@ -1248,9 +1279,9 @@ The Ethproofs settings are flags only. This binary reads no `ETHPROOFS_*` variab
 | `bench` | `--file-name` (required), `--iterations` (default 5), `--backend` | Prove one MFBD file repeatedly with one prover. Print each time and the min, median and max. |
 | `verify` | `--proof`, `--vk`, and `--file-name` or `--block-hash` | Verify the proof against the key. Check that its output is the hash of the input's last valid block, or the given hash. |
 
-Without `--file-name`, input comes from `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`. If that file is missing, the legacy `unifiedBlockAndStateRlp<N>.bin` is tried. With `--is-test` the input is an EEST JSON fixture. Proof files are gzip EPROOF01 v2. The `cpu` backend is slow; [Airbender prover](../provers/airbender-prover.md) gives its memory need.
+Without `--file-name`, input comes from `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`, and if that file is missing the prover tries the legacy `unifiedBlockAndStateRlp<N>.bin`. With `--is-test` the input is an EEST JSON fixture. Proof files are gzip EPROOF01 v2. The `cpu` backend is slow, and [Airbender prover](../provers/airbender-prover.md) gives its memory need.
 
-`execute` and `--test-service` append to the execution log. `execute` warns when a run has more cycles than the prover takes.
+Both `execute` and `--test-service` append to the execution log, and `execute` warns you when a run has more cycles than the prover takes.
 
 ### Environment variables
 
@@ -1266,7 +1297,7 @@ Without `--file-name`, input comes from `<data-dir>/blocks/<N>/flatWitnessBundle
 
 ### Docker entrypoint
 
-The image's entrypoint runs the prover with any arguments you pass, plus `--guest-bin`. With no arguments it runs the service from the environment. It first computes the verification key into `$DATA_DIR/vk-<rev>-<id>/vk.bin`. Then it runs `--service --gpu` and restarts the service whenever it exits. Proofs go to `$DATA_DIR/proofs/<N>/proof.bin`.
+The image's entrypoint runs the prover with any arguments you pass, plus `--guest-bin`. If you pass none, it runs the service from the environment variables below. It first computes the verification key into `$DATA_DIR/vk-<rev>-<id>/vk.bin`, then runs `--service --gpu` and restarts the service whenever it exits. Proofs go to `$DATA_DIR/proofs/<N>/proof.bin`.
 
 | Variable | Default | Effect |
 |---|---|---|
@@ -1284,13 +1315,13 @@ The image's entrypoint runs the prover with any arguments you pass, plus `--gues
 
 ## state_transition
 
-`state_transition` runs the whole state transition natively. The release ships it as `state_transition_linux_x86_64`. A local build puts it at `build/zilk_core/dev/cli/state_transition`.
+`state_transition` runs the whole state transition natively. You get it from a release as `state_transition_linux_x86_64`, or from a local build at `build/zilk_core/dev/cli/state_transition`.
 
 ```bash
 state_transition <flatWitnessBundle.mfbd>|<test.json>|<test_dir>
 ```
 
-A path ending in `.json` runs as an EEST blockchain test. Any other file runs as an MFBD bundle. A directory is scanned recursively. For a bundle it prints `Cumulative Gas Used: <n>`, `FAIL: <path>` or `SKIP: <path>`.
+The tool picks its mode from the path. A path ending in `.json` runs as an EEST blockchain test, any other file runs as an MFBD bundle, and a directory is scanned recursively. For a bundle it prints `Cumulative Gas Used: <n>`, `FAIL: <path>` or `SKIP: <path>`.
 
 | Exit code | Meaning |
 |---|---|
@@ -1300,7 +1331,7 @@ A path ending in `.json` runs as an EEST blockchain test. Any other file runs as
 | 3 | The bundle could not be read, or an exception was thrown. |
 | 4 | An unknown exception. |
 
-Directory mode only picks up `.json` and `.bin` files, so a directory of `.mfbd` files runs nothing and exits 2. Pass bundles one at a time instead.
+Watch out for directory mode. It only picks up `.json` and `.bin` files, so a directory of `.mfbd` files runs nothing and exits 2; pass bundles one at a time instead.
 
 ## Further reading
 
@@ -1319,30 +1350,30 @@ _Each Zilkworm release ships host binaries, guest images and verification keys, 
 
 # Releases and assets
 
-Releases are on the [GitHub releases page](https://github.com/erigontech/zilkworm/releases). All of them are pre-releases so far. Each release body opens with the matching section of `CHANGELOG.md`.
+This page tells you what each Zilkworm release ships, which verification key goes with which guest, and how a release is cut.
 
-Performance numbers on this site appear only here. Each one comes from the CHANGELOG section of the tag on its line.
+Releases are on the [GitHub releases page](https://github.com/erigontech/zilkworm/releases), and so far all of them are pre-releases. Each release body opens with the matching section of `CHANGELOG.md`.
+
+This is the only page on the site with performance numbers. Each one comes from the CHANGELOG section of the tag on its line.
 
 ## Current status
 
-- Latest release: `v0.1.0-alpha.7`, published 25 October 2026.
-- EEST pin: `tests@v21.0.1`.
-- Ethproofs: Airbender live. The `v0.1.0-alpha.5` result below has Ethproofs provenance. There is no Hypercube cluster on Ethproofs.
+The latest release is `v0.1.0-alpha.7`, published 25 October 2026, and the EEST pin is `tests@v21.0.1`. Airbender is live on Ethproofs, and the `v0.1.0-alpha.5` result below has Ethproofs provenance. There is no Hypercube cluster on Ethproofs.
 
-The overview's status strip reads `src/data/status.json` in the docs repository. Update that file and this page together on each release.
+The overview's status strip reads `src/data/status.json` in the docs repository, so update that file and this page together on each release.
 
 ## Release history
 
 | Tag | Title | Highlights |
 |---|---|---|
-| `v0.1.0-alpha.1` | First Public Alpha | The C++ guest on SP1 Hypercube, with precompiles on SP1 syscalls. |
-| `v0.1.0-alpha.2` | More performance more testing and more stability | "Close to 10% improved proving time". The EEST suite runs inside the Hypercube prover. |
-| `v0.1.0-alpha.2-ere` | ERE zkEVM benchmark integration | alpha.2 plus the ERE benchmark integration. It has no CHANGELOG section. |
-| `v0.1.0-alpha.3` | MFBD witness format, pre-trie validation and Amsterdam | The MFBD bundle, and pre-state checks against the parent root. |
-| `v0.1.0-alpha.4` | ERE stateless input, stateless new-payload checks and Sepolia | 33,635 of 33,637 `output_matched` on tests-zkevm v21.0.1. Estimated prover cost 0.500x Reth 0.1.0-rc.4's on Sepolia. |
-| `v0.1.0-alpha.5` | Real-time proving with Airbender v3 | Airbender proves 200 consecutive mainnet blocks at a 3.4 s median on 2x RTX 5090, slowest 6.1 s. Ethproofs provenance, 15 October 2026. 2.58 s median on 4x RTX 5090. |
-| `v0.1.0-alpha.6` | Native statelessInputBytes with the HashState backend | CI 200-block benchmark: Hypercube guest cycles from 23.21B at alpha.5 to 17.44B (-24.9%), Airbender from 27.86B to 27.65B (-0.8%). The HashState ERE guest is at Z/R 0.477 against Reth 0.1.0-rc.4. |
-| `v0.1.0-alpha.7` | SP1 v6.9.0 and a leaner HashState guest | ERE estimated cost −1.70% on Sepolia 11982400..11982499. The SP1 bump leaves guest cycles as on alpha.6. |
+| `v0.1.0-alpha.1` | First Public Alpha | The C++ guest runs on SP1 Hypercube, with precompiles on SP1 syscalls. |
+| `v0.1.0-alpha.2` | More performance more testing and more stability | The notes report "Close to 10% improved proving time", and the EEST suite runs inside the Hypercube prover. |
+| `v0.1.0-alpha.2-ere` | ERE zkEVM benchmark integration | This is alpha.2 plus the ERE benchmark integration, and it has no CHANGELOG section. |
+| `v0.1.0-alpha.3` | MFBD witness format, pre-trie validation and Amsterdam | It adds the MFBD bundle and pre-state checks against the parent root. |
+| `v0.1.0-alpha.4` | ERE stateless input, stateless new-payload checks and Sepolia | On tests-zkevm v21.0.1, 33,635 of 33,637 fixtures report `output_matched`. On Sepolia, the estimated prover cost is 0.500x Reth 0.1.0-rc.4's. |
+| `v0.1.0-alpha.5` | Real-time proving with Airbender v3 | Airbender proves 200 consecutive mainnet blocks at a 3.4 s median on 2x RTX 5090, with the slowest at 6.1 s. That run has Ethproofs provenance from 15 October 2026. On 4x RTX 5090 the median is 2.58 s. |
+| `v0.1.0-alpha.6` | Native statelessInputBytes with the HashState backend | In the CI 200-block benchmark, Hypercube guest cycles fall from 23.21B at alpha.5 to 17.44B (-24.9%), and Airbender's from 27.86B to 27.65B (-0.8%). The HashState ERE guest is at Z/R 0.477 against Reth 0.1.0-rc.4. |
+| `v0.1.0-alpha.7` | SP1 v6.9.0 and a leaner HashState guest | The ERE estimated cost changes by −1.70% on Sepolia 11982400..11982499, and the SP1 bump leaves guest cycles as they were on alpha.6. |
 
 ## Assets in v0.1.0-alpha.7
 
@@ -1359,20 +1390,21 @@ The overview's status strip reads `src/data/status.json` in the docs repository.
 | `z6m_guest_airbender.vk` | EVKEY001 v2 verification key, computed on CPU by the image's prover | Airbender v3 | none |
 | `SHA256SUMS.txt` | sha256 of every file above | none | none |
 
-The release also tags the image `ghcr.io/erigontech/zilkworm-airbender:<tag>`. Its notes give the image digest and the sha256 of `z6m_guest_airbender.vk`. Upload that key to your Ethproofs cluster so its proofs show as verified.
+The release also tags the image `ghcr.io/erigontech/zilkworm-airbender:<tag>`, and its notes give the image digest and the sha256 of `z6m_guest_airbender.vk`. If you run an Ethproofs cluster, upload that key to it so its proofs show as verified.
 
 ## Verification keys
 
-A key belongs to one guest build. The Hypercube MFBD guest is built with `USE_HASH_KEY=OFF`, and the Airbender guest with `USE_HASH_KEY=ON`. The key depends on that flag, so a local build reproduces a published key only with the same setting.
+A key belongs to one guest build. The Hypercube MFBD guest is built with `USE_HASH_KEY=OFF`, and the Airbender guest with `USE_HASH_KEY=ON`. Since the key depends on that flag, your local build reproduces a published key only if you use the same setting.
 
-Keys also change when the guest code does not. Keys published for `v0.1.0-alpha.6` do not verify `v0.1.0-alpha.7` proofs. SP1 v6.9.0 loads a guest's initial memory correctly, where v6.6.0 zeroed up to four bytes of it ([sp1#2981](https://github.com/succinctlabs/sp1/pull/2981)). In `v0.1.0-alpha.7` the MFBD and Airbender guests and their keys also changed with [#141](https://github.com/erigontech/zilkworm/pull/141). Always check a proof against the key from its own release.
+Keys can also change when the guest code does not. Keys published for `v0.1.0-alpha.6` do not verify `v0.1.0-alpha.7` proofs, and part of the reason is the SP1 bump. SP1 v6.9.0 loads a guest's initial memory correctly, where v6.6.0 zeroed up to four bytes of it ([sp1#2981](https://github.com/succinctlabs/sp1/pull/2981)). On top of that, [#141](https://github.com/erigontech/zilkworm/pull/141) changed the MFBD and Airbender guests and their keys in `v0.1.0-alpha.7`. Always check a proof against the key from its own release.
 
 ## Older asset names
 
-- `v0.1.0-alpha.5` shipped the Hypercube guest as `z6m_guest_hypercube.{elf,vk}`.
-- `v0.1.0-alpha.6` release notes call the ERE guest `z6m_guest_hypercube_slib`. Its assets are `stateless-validator-zilkworm-sp1-v6.6.0.{elf,vk}`.
+Two earlier releases used other names. `v0.1.0-alpha.5` shipped the Hypercube guest as `z6m_guest_hypercube.{elf,vk}`. The `v0.1.0-alpha.6` release notes call the ERE guest `z6m_guest_hypercube_slib`, while its assets are `stateless-validator-zilkworm-sp1-v6.6.0.{elf,vk}`.
 
 ## Release procedure
+
+To cut a release, you work through five steps:
 
 1. Create a branch, usually `release/X.Y.Z`.
 2. Bump `PROJECT_VERSION` in `CMakeLists.txt` to `X.Y.Z`.
@@ -1380,7 +1412,9 @@ Keys also change when the guest code does not. Keys published for `v0.1.0-alpha.
 4. Commit and push the branch.
 5. Tag the release commit `vX.Y.Z` and push the tag. The tag must equal `PROJECT_VERSION`, or the workflow fails.
 
-The `Release` workflow then tags the Airbender image, builds the assets, writes `SHA256SUMS.txt` and publishes the release. It ends with an ERE benchmark run on the published guest. Tag a commit on `main` only after its `Airbender Prover Image` run has finished. Otherwise the image is built twice, and its commit and release tags can name two different builds.
+From there the `Release` workflow takes over. It tags the Airbender image, builds the assets, writes `SHA256SUMS.txt` and publishes the release, then ends with an ERE benchmark run on the published guest.
+
+If you tag a commit on `main`, wait until its `Airbender Prover Image` run has finished. Otherwise the image is built twice, and its commit and release tags can name two different builds.
 
 ## Further reading
 
@@ -1399,9 +1433,11 @@ _Build the native tools, the guests and the host provers from source, and run th
 
 # Building from source
 
+Follow this page to build Zilkworm's native tools, guests and host provers from source, and to run the unit tests.
+
 ## Native build
 
-You need CMake 3.28 or newer, Ninja and GCC 15. Clone the repository with its one submodule, `third_party/evmone`. It holds ZVM1, the Zilkworm fork of evmone.
+For the native build you need CMake 3.28 or newer, Ninja and GCC 15. Clone the repository with its one submodule, `third_party/evmone`, which holds ZVM1, the Zilkworm fork of evmone. Then configure and build:
 
 ```bash
 git clone https://github.com/erigontech/zilkworm
@@ -1411,32 +1447,32 @@ cmake -DCMAKE_BUILD_TYPE=Release -B build -G Ninja -S .
 cmake --build build -j$(nproc)
 ```
 
-The guests also need the xPack `riscv-none-elf-gcc` cross-compiler. CI pins version `15.2.0-1.1`:
+To build the guests you also need the xPack `riscv-none-elf-gcc` cross-compiler. CI pins version `15.2.0-1.1`:
 
 ```bash
 npm install -g xpm
 xpm install @xpack-dev-tools/riscv-none-elf-gcc@15.2.0-1.1 --global
 ```
 
-The Makefile puts the first xPack GCC it finds under `~/.local/xPacks` on `PATH`. On macOS it looks under `~/Library/xPacks`. Keep only `15.2.0-1.1` installed, or a guest can build with an older compiler.
+The Makefile puts the first xPack GCC it finds under `~/.local/xPacks` on `PATH`, or under `~/Library/xPacks` on macOS. Since it takes the first one, keep only `15.2.0-1.1` installed, or a guest can build with an older compiler.
 
 ## state_transition
 
-The native build produces `build/zilk_core/dev/cli/state_transition`. It runs the whole state transition outside any zkVM.
+The native build produces `build/zilk_core/dev/cli/state_transition`, which runs the whole state transition outside any zkVM. Point it at a bundle:
 
 ```bash
 build/zilk_core/dev/cli/state_transition <flatWitnessBundle.mfbd>
 ```
 
-It also takes an EEST blockchain-test JSON or a directory. [CLI reference](./cli-reference.md#state_transition) lists its inputs and exit codes.
+It also takes an EEST blockchain-test JSON or a directory, and [CLI reference](./cli-reference.md#state_transition) lists its inputs and exit codes.
 
 ## Converters
 
-Three converters sit next to it. Each writes the MFBD bundle that [Witness formats](../inside-the-guest/witness-formats.md) describes.
+Three converters sit next to it, and each one writes the MFBD bundle that [Witness formats](../inside-the-guest/witness-formats.md) describes.
 
 - `json_witness_to_flat_bundle` reads a witness JSON document on stdin and writes the bundle to stdout.
 - `legacy_to_flat_bundle <in.bin> <out.mfbd>` converts an older `unifiedBlockAndStateRlp<N>.bin` file.
-- `eest_to_flat_bundle` converts EEST blockchain-test JSON. `emit --json <PATH> --index <N>` writes one case to stdout. `bulk-convert --input-dir <D> --output-dir <D>` mirrors a whole tree.
+- `eest_to_flat_bundle` converts EEST blockchain-test JSON. Its `emit --json <PATH> --index <N>` writes one case to stdout, and `bulk-convert --input-dir <D> --output-dir <D>` mirrors a whole tree.
 
 ## Guest targets
 
@@ -1449,9 +1485,11 @@ Each guest target cross-compiles the C++ core for one zkVM.
 | `make z6m_guest_airbender` | Airbender guest, `USE_HASH_KEY=ON` | `prover/guest_airbender/build/z6m_guest.bin` and `.text` |
 | `make z6m_guest_zisk` | ZisK guest, only on PR #86; see [ZisK prover](../provers/zisk-prover.md) | `prover/guest_zisk/build/z6m_guest.elf` |
 
-The Hypercube guests use the toolchain file `prover/guest_hypercube/cmake/riscv64im-sp1.cmake`. The Airbender guest uses `prover/guest_airbender/cmake/riscv32im.cmake`. `USE_HASH_KEY` changes the verification key, as [Releases and assets](./releases-and-assets.md#verification-keys) explains.
+The Hypercube guests use the toolchain file `prover/guest_hypercube/cmake/riscv64im-sp1.cmake`, and the Airbender guest uses `prover/guest_airbender/cmake/riscv32im.cmake`. Keep an eye on `USE_HASH_KEY`, because it changes the verification key, as [Releases and assets](./releases-and-assets.md#verification-keys) explains.
 
 ## Host targets
+
+On the host side, three targets build the provers and a fourth builds `derive_vk`.
 
 | Target | Builds | Output |
 |---|---|---|
@@ -1460,17 +1498,17 @@ The Hypercube guests use the toolchain file `prover/guest_hypercube/cmake/riscv6
 | `make z6m_prover_airbender` | The Airbender guest and its host | `prover/prover_airbender/target/release/z6m_prover_airbender` |
 | `make derive_vk` | `derive_vk <elf> <vk>`, which writes a guest's 32-byte SP1 key | `prover/target/release/derive_vk` |
 
-`make z6m_prover` and `make z6m_prover_slib` write the same binary, so the last one built wins. `make z6m_guest_vk` and `make ere-bin` run `derive_vk` with `SP1_PROVER=mock`.
+`make z6m_prover` and `make z6m_prover_slib` write the same binary, so whichever you built last wins. Both `make z6m_guest_vk` and `make ere-bin` run `derive_vk` with `SP1_PROVER=mock`.
 
 :::caution
-A tree that ran `make z6m_prover_slib` before `v0.1.0-alpha.7` must delete `prover/guest_hypercube/build/z6m_guest.elf` once. Otherwise `make z6m_prover` keeps embedding the HashState guest.
+If your tree ran `make z6m_prover_slib` before `v0.1.0-alpha.7`, delete `prover/guest_hypercube/build/z6m_guest.elf` once. Otherwise `make z6m_prover` keeps embedding the HashState guest.
 :::
 
-The Airbender host builds with GPU support by default. Without CUDA, build it with `cargo build --release --no-default-features` in `prover/prover_airbender`, as CI does. Each Rust workspace pins its toolchain in `rust-toolchain.toml`.
+The Airbender host builds with GPU support by default. If you have no CUDA, build it with `cargo build --release --no-default-features` in `prover/prover_airbender`, as CI does. Each Rust workspace pins its own toolchain in `rust-toolchain.toml`.
 
 ## Tests
 
-The unit tests build and run as in CI:
+To build and run the unit tests the way CI does:
 
 ```bash
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
@@ -1478,15 +1516,15 @@ cmake --build build --target zilkworm.tests
 ctest --test-dir build --output-on-failure --parallel
 ```
 
-Add `-DZ6M_HASH_STATE=ON` to run them on the HashState backend. The EEST suites are on [Execution spec tests](../testing/execution-spec-tests.md) and [RISC-V tests under QEMU](../testing/riscv-tests-under-qemu.md).
+Add `-DZ6M_HASH_STATE=ON` to run them on the HashState backend. For the EEST suites, see [Execution spec tests](../testing/execution-spec-tests.md) and [RISC-V tests under QEMU](../testing/riscv-tests-under-qemu.md).
 
 ## Code style
 
-The C++ code follows Silkworm's style: the C++ Core Guidelines and Google's C++ style guide, with project changes.
-`zilk_core/.clang-format` holds the format rules.
-`zilk_core/.clang-tidy` holds the lint checks.
+The C++ code follows Silkworm's style, which is the C++ Core Guidelines plus Google's C++ style guide, with project changes. The format rules live in `zilk_core/.clang-format`, and the lint checks in `zilk_core/.clang-tidy`.
 
 ## Repo docs
+
+The Zilkworm repository has its own docs on each part:
 
 - [`docs/architecture.md`](https://github.com/erigontech/zilkworm/blob/main/docs/architecture.md): the layers, the input envelope and the public values.
 - [`docs/mfbd_design_specs.md`](https://github.com/erigontech/zilkworm/blob/main/docs/mfbd_design_specs.md): the MFBD spec for producers and verifiers.
@@ -1510,39 +1548,39 @@ _Make targets benchmark the Hypercube, HashState, Airbender and ERE paths, and G
 
 # Benchmarks and CI
 
-The benchmarks below measure cycles and estimated prover cost. Their results for each release are on [Releases and assets](./releases-and-assets.md).
+With this page you can run each benchmark yourself and find out which GitHub workflow runs what in CI. The benchmarks measure cycles and estimated prover cost, and their results for each release are on [Releases and assets](./releases-and-assets.md).
 
 ## Hypercube 200-block benchmark
 
-`make sp1-benchmark` runs the Hypercube MFBD guest over 200 mainnet blocks. It builds `z6m_prover`, then runs `make sp1-benchmark-corpus`, then `tools/scripts/sp1_benchmark.py`.
+`make sp1-benchmark` runs the Hypercube MFBD guest over 200 mainnet blocks. In order, it builds `z6m_prover`, runs `make sp1-benchmark-corpus` and then runs `tools/scripts/sp1_benchmark.py`.
 
-`sp1-benchmark-corpus` converts each `temp/200_benchmark_blocks/<N>/unifiedBlockAndStateRlp<N>.bin` with `legacy_to_flat_bundle`. The bundles go to `temp/200_benchmark_blocks_mfbd_v2/<N>/`. `BENCH_SRC_DIR` and `BENCH_CORPUS_DIR` override the two paths. CI downloads the raw blocks from the [`benchmark-200-spread`](https://github.com/erigontech/zilkworm-testdata/releases/tag/benchmark-200-spread) release of `erigontech/zilkworm-testdata`.
+`sp1-benchmark-corpus` converts each `temp/200_benchmark_blocks/<N>/unifiedBlockAndStateRlp<N>.bin` with `legacy_to_flat_bundle` and writes the bundles to `temp/200_benchmark_blocks_mfbd_v2/<N>/`. You can override the two paths with `BENCH_SRC_DIR` and `BENCH_CORPUS_DIR`. CI downloads the raw blocks from the [`benchmark-200-spread`](https://github.com/erigontech/zilkworm-testdata/releases/tag/benchmark-200-spread) release of `erigontech/zilkworm-testdata`.
 
-The script takes `--dir`, and optionally `--start` and `--count`. It writes `execution.log` and `summary.md` to `temp/benchmarks/benchmark_<timestamp>/`. It does not compare against a baseline. To compare two builds, run it on each and compare the totals.
+The script takes `--dir`, and optionally `--start` and `--count`, and writes `execution.log` and `summary.md` to `temp/benchmarks/benchmark_<timestamp>/`. It does not compare against a baseline. If you want to compare two builds, run it on each and compare the totals yourself.
 
 ## HashState benchmark
 
-`make slib-benchmark` measures the SP1 cycles of the HashState guest. It downloads the 30M-gas `tests-zkevm-benchmark@v21.0.5` fixtures with `gh release download`, so `gh` must be logged in. It builds `z6m_prover_slib` and runs each case through `z6m_prover execute --is-test`. Per-case results go to `temp/slib_benchmark/per_case.csv`.
+`make slib-benchmark` measures the SP1 cycles of the HashState guest. It downloads the 30M-gas `tests-zkevm-benchmark@v21.0.5` fixtures with `gh release download`, so make sure `gh` is logged in first. It then builds `z6m_prover_slib` and runs each case through `z6m_prover execute --is-test`, writing per-case results to `temp/slib_benchmark/per_case.csv`.
 
-These numbers are not the production path. `execute --is-test` sends the whole fixture JSON to the guest, and parsing it is about half the cycles. The ERE benchmark below measures the production input. [`docs/slib_benchmark.md`](https://github.com/erigontech/zilkworm/blob/main/docs/slib_benchmark.md) has the details.
+Read these numbers with care, because they do not measure the production path. `execute --is-test` sends the whole fixture JSON to the guest, and parsing it is about half the cycles. The ERE benchmark below measures the production input, and [`docs/slib_benchmark.md`](https://github.com/erigontech/zilkworm/blob/main/docs/slib_benchmark.md) has the details.
 
-`z6m_prover_slib` replaces `prover/target/release/z6m_prover`. Run `make z6m_prover` again before an MFBD run.
+Also, `z6m_prover_slib` replaces `prover/target/release/z6m_prover`, so run `make z6m_prover` again before your next MFBD run.
 
 ## Airbender benchmark
 
-`tools/scripts/airbender_benchmark.sh --dir <corpus>` runs `z6m_prover_airbender execute` on every bundle in the corpus. It takes the layout that `make sp1-benchmark-corpus` writes. It reports gas and cycle statistics, with logs in `temp/airbender_benchmark/`. Options `-j`, `-s`, `-e`, `-l` and `-t` set the jobs, block range, log directory and per-block timeout.
+For Airbender, `tools/scripts/airbender_benchmark.sh --dir <corpus>` runs `z6m_prover_airbender execute` on every bundle in the corpus. It expects the layout that `make sp1-benchmark-corpus` writes. It reports gas and cycle statistics and keeps its logs in `temp/airbender_benchmark/`. Use `-j`, `-s`, `-e`, `-l` and `-t` to set the jobs, block range, log directory and per-block timeout.
 
-The prover's `bench` subcommand is different. It proves one block several times.
+Don't confuse this script with the prover's `bench` subcommand, which proves one block several times.
 
 ## ERE benchmark
 
-The ERE benchmark runs the HashState guest inside SP1 through `ere-hosts`, on each fixture's `statelessInputBytes`. `make ere-cost` estimates the guest's SP1 cost and prints a cost table. `make ere-compare` runs `ere-cost`, then estimates Reth's cost on the same fixtures and compares the two. `make ere-compare -o ere-cost` reuses an earlier `ere-cost` run.
+The ERE benchmark runs the HashState guest inside SP1 through `ere-hosts`, on each fixture's `statelessInputBytes`. `make ere-cost` estimates the guest's SP1 cost and prints a cost table. To see how that compares with Reth, `make ere-compare` runs `ere-cost`, then estimates Reth's cost on the same fixtures and compares the two. If you already have an `ere-cost` run, `make ere-compare -o ere-cost` reuses it.
 
-Both targets run in a `zkevm-benchmark-workload` checkout at `ERE_WORKLOAD_DIR`. Set `ERE_BIN_PATH=build/ere-bin` to run the guest from `make ere-bin`. Without it, the published guest is downloaded. [ERE validation](../testing/ere-validation.md) covers the setup, `ere-validate` and the `output_matched` check.
+Both targets run in a `zkevm-benchmark-workload` checkout at `ERE_WORKLOAD_DIR`. To run the guest from `make ere-bin`, set `ERE_BIN_PATH=build/ere-bin`; without it, the published guest is downloaded. [ERE validation](../testing/ere-validation.md) covers the setup, `ere-validate` and the `output_matched` check.
 
 ## CI workflows
 
-All workflows live in [`.github/workflows/`](https://github.com/erigontech/zilkworm/tree/main/.github/workflows). Most run in the `ghcr.io/erigontech/zilkworm-ci` image.
+Every workflow lives in [`.github/workflows/`](https://github.com/erigontech/zilkworm/tree/main/.github/workflows), and most run in the `ghcr.io/erigontech/zilkworm-ci` image. Here is what each one runs, and when:
 
 | File | Name | What it runs | Trigger |
 |---|---|---|---|
@@ -1562,7 +1600,7 @@ All workflows live in [`.github/workflows/`](https://github.com/erigontech/zilkw
 | `zisk-eest.yml` | ZisK EEST Blockchain Tests | PR #86 only. EEST under `ziskemu`, execute only | push, PR to main, master, release/* on path changes; dispatch |
 | `zisk-benchmark.yml` | ZisK 200-block Bench | PR #86 only. The 200-block corpus under `ziskemu`, execute only | push, PR to main, master, release/* on path changes; dispatch |
 
-The two ZisK workflows exist only on [PR #86](https://github.com/erigontech/zilkworm/pull/86). They run in `ghcr.io/erigontech/zilkworm-ci-zisk`.
+The two ZisK workflows exist only on [PR #86](https://github.com/erigontech/zilkworm/pull/86), and they run in their own image, `ghcr.io/erigontech/zilkworm-ci-zisk`.
 
 ## Further reading
 

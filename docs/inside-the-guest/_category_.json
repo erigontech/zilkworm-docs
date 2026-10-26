@@ -6,6 +6,6 @@
   "link": {
     "type": "generated-index",
     "slug": "/inside-the-guest",
-    "description": "See what the guest reads, runs, commits and proves."
+    "description": "Learn what the guest reads, how it runs a block, and what a proof of that run tells you."
   }
 }

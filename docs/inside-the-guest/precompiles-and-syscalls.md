@@ -6,11 +6,13 @@ sidebar_position: 3
 
 # Precompiles and syscalls
 
-Hashing and curve math take many RISC-V instructions. A zkVM proves every instruction it runs, so plain code for these routines makes a long trace. Each zkVM offers dedicated circuits for them instead. The guest reaches a circuit through an `ecall` on SP1, or a CSR access on Airbender and ZisK. Each such call replaces a software routine the prover would otherwise trace cycle by cycle.
+This page shows you where each guest hands work to its zkVM's dedicated circuits, which call reaches which circuit, and what stays in plain RISC-V code.
+
+Hashing and curve math take many RISC-V instructions, and a zkVM proves every instruction it runs, so plain code for these routines makes a long trace. That is why each zkVM offers dedicated circuits for them. The guest reaches a circuit through an `ecall` on SP1, or through a CSR access on Airbender and ZisK. Each such call replaces a software routine the prover would otherwise trace cycle by cycle.
 
 ## SP1 ecalls
 
-Both Hypercube guests declare their ecalls in `prover/guest_hypercube/src/include/sp1_syscalls.hpp`. Most wrappers are always inlined and compile to a single `ecall`. Most call sites sit in ZVM1, the evmone fork in `third_party/evmone`.
+Both Hypercube guests declare their ecalls in `prover/guest_hypercube/src/include/sp1_syscalls.hpp`. Most wrappers are always inlined and compile to a single `ecall`, and most call sites sit in ZVM1, the evmone fork in `third_party/evmone`.
 
 | Ecalls | Called from | Used for |
 |---|---|---|
@@ -22,13 +24,13 @@ Both Hypercube guests declare their ecalls in `prover/guest_hypercube/src/includ
 | `bn254_add`, `bn254_double` | evmone's precompile dispatch, `test/state/precompiles.cpp` | Point math for ECADD and ECMUL |
 | `bls12381_fp_*mod`, `bls12381_fp2_*mod` | `cmake/patch_blst_sp1.sh`, a build-time patch of blst | The BLS12-381 precompiles and KZG point evaluation |
 
-The header also declares ecalls that nothing in the guest calls at the current ZVM1 pin. They are the secp256r1 and ed25519 point ecalls, `bls12381_add` and `bls12381_double`, `u256x2048_mul`, and the two `uint256_*_with_carry` calls.
+The header also declares ecalls that nothing in the guest calls at the current ZVM1 pin. Those are the secp256r1 and ed25519 point ecalls, `bls12381_add` and `bls12381_double`, `u256x2048_mul`, and the two `uint256_*_with_carry` calls.
 
-The guest commits public values by writing to file descriptor 13, `SP1_FD_PUBLIC_VALUES`. The runtime in `prover/guest_hypercube/src/sp1_runtime.cpp` buffers those bytes. At halt it hashes them with SHA-256 and commits the digest.
+Public values take a different route. The guest commits them by writing to file descriptor 13, `SP1_FD_PUBLIC_VALUES`, and the runtime in `prover/guest_hypercube/src/sp1_runtime.cpp` buffers those bytes. At halt it hashes them with SHA-256 and commits the digest.
 
 ## Airbender CSRs
 
-The Airbender guest reaches its delegation circuits by writing to CSRs. `prover/guest_airbender/src/include/airbender_csr.hpp` names them.
+The Airbender guest reaches its delegation circuits by writing to CSRs, which `prover/guest_airbender/src/include/airbender_csr.hpp` names.
 
 | CSR | Name | Use in the guest |
 |---|---|---|
@@ -49,11 +51,11 @@ The curve and scalar logic around these calls stays RISC-V code in ZVM1. The alp
 | P256VERIFY | BigInt | evmone's generic Montgomery field template |
 | KECCAK256, and every hash the guest computes | keccak_f1600 | One delegation run per permutation |
 
-The EVM's own 256-bit add, subtract and multiply, and its 32-byte copies, also run on BigInt.
+BigInt also carries the EVM's own 256-bit add, subtract and multiply, along with its 32-byte copies.
 
 ## ZisK CSRs on PR #86
 
-The ZisK guest exists only on [draft PR #86](https://github.com/erigontech/zilkworm/pull/86). It calls ZisK's CSR precompiles, in the range `0x800` to `0x819`. Its `memcpy`, `memmove`, `memset` and `memcmp` go to ZisK's DMA precompiles.
+The ZisK guest exists only on [draft PR #86](https://github.com/erigontech/zilkworm/pull/86). It calls ZisK's CSR precompiles, in the range `0x800` to `0x819`, and its `memcpy`, `memmove`, `memset` and `memcmp` go to ZisK's DMA precompiles.
 
 | Area | ZisK precompiles |
 |---|---|
@@ -70,7 +72,7 @@ The ZisK guest exists only on [draft PR #86](https://github.com/erigontech/zilkw
 
 RIPEMD160, IDENTITY and MODEXP with operands over 32 bytes stay in software. DIV, SDIV and SMOD use a division hint that the guest checks.
 
-A hint, or fcall, returns a value the prover supplies freely. So the guest checks every hint before it uses the result. A bad inverse, square-root or division hint halts the run with an error, and no proof can exist. A bad GLV-split hint is the one exception. The guest then falls back to the software split, which needs no hint.
+Hints deserve a closer look. A hint, or fcall, returns a value the prover supplies freely, so the guest checks every hint before it uses the result. A bad inverse, square-root or division hint halts the run with an error, and no proof can exist. The one exception is a bad GLV-split hint: the guest just falls back to the software split, which needs no hint.
 
 ## Further reading
 

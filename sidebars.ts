@@ -10,14 +10,14 @@ const sidebars: SidebarsConfig = {
       link: {
         type: 'generated-index',
         slug: '/provers',
-        description: 'Pick a prover, run it, post proofs to Ethproofs.',
+        description: 'Pick a prover, run it on your own hardware, and post its proofs to Ethproofs.',
       },
       collapsible: true,
       collapsed: true,
       items: [
         {type: 'doc', id: 'provers/choosing-a-prover', customProps: {summary: 'which prover to run'}},
         {type: 'doc', id: 'provers/airbender-prover', customProps: {summary: 'published GPU image, live on Ethproofs'}},
-        {type: 'doc', id: 'provers/hypercube-prover', customProps: {summary: 'SP1 binary, known limits stated'}},
+        {type: 'doc', id: 'provers/hypercube-prover', customProps: {summary: 'the SP1 binary and its known limits'}},
         {type: 'doc', id: 'provers/zisk-prover', customProps: {summary: 'draft PR #86, execute-only'}},
         {type: 'doc', id: 'provers/ethproofs-posting', customProps: {summary: 'flags, lifecycle, cluster key'}},
       ],
@@ -28,7 +28,7 @@ const sidebars: SidebarsConfig = {
       link: {
         type: 'generated-index',
         slug: '/inside-the-guest',
-        description: 'See what the guest reads, runs, commits and proves.',
+        description: 'Learn what the guest reads, how it runs a block, and what a proof of that run tells you.',
       },
       collapsible: true,
       collapsed: true,
@@ -45,14 +45,14 @@ const sidebars: SidebarsConfig = {
       link: {
         type: 'generated-index',
         slug: '/testing',
-        description: 'Check the guests against spec tests, QEMU and ERE.',
+        description: 'Run the spec tests yourself, natively or under QEMU, and see how the ERE harness checks the guest.',
       },
       collapsible: true,
       collapsed: true,
       items: [
-        {type: 'doc', id: 'testing/execution-spec-tests', customProps: {summary: 'EEST fixtures, native and in-guest'}},
+        {type: 'doc', id: 'testing/execution-spec-tests', customProps: {summary: 'spec tests, natively and inside the guests'}},
         {type: 'doc', id: 'testing/riscv-tests-under-qemu', customProps: {summary: 'bare-metal rv32im and rv64im under QEMU'}},
-        {type: 'doc', id: 'testing/ere-validation', customProps: {summary: 'HashState guest in the ERE harness'}},
+        {type: 'doc', id: 'testing/ere-validation', customProps: {summary: 'the HashState guest in the ERE harness'}},
       ],
     },
     {
@@ -61,7 +61,7 @@ const sidebars: SidebarsConfig = {
       link: {
         type: 'generated-index',
         slug: '/reference',
-        description: 'Look up CLI flags, releases, build steps and CI.',
+        description: 'Look up a flag, a release asset, a build step or a CI workflow when you need it.',
       },
       collapsible: true,
       collapsed: true,

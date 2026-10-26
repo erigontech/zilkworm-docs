@@ -36,7 +36,7 @@ const products: Product[] = [
     status: 'shipped',
     facts: [
       {label: 'ELF', value: 'stateless-validator-zilkworm-sp1-v6.9.0.elf', code: true},
-      {label: 'Use', value: 'ERE validation and cost estimate'},
+      {label: 'Use', value: 'ERE validation and cost estimates'},
     ],
   },
 ];

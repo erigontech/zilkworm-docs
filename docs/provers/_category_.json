@@ -6,6 +6,6 @@
   "link": {
     "type": "generated-index",
     "slug": "/provers",
-    "description": "Pick a prover, run it, post proofs to Ethproofs."
+    "description": "Pick a prover, run it on your own hardware, and post its proofs to Ethproofs."
   }
 }

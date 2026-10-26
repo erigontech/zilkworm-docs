@@ -6,11 +6,13 @@ sidebar_position: 1
 
 # CLI reference
 
-Zilkworm has three command-line tools. `z6m_prover` drives the SP1 Hypercube guest. `z6m_prover_airbender` drives the Airbender guest. `state_transition` runs a block natively, outside any zkVM. The facts below match `v0.1.0-alpha.7`.
+Use this page to look up a flag, subcommand, environment variable or exit code for any of Zilkworm's three command-line tools. Everything here matches `v0.1.0-alpha.7`.
+
+`z6m_prover` drives the SP1 Hypercube guest and `z6m_prover_airbender` drives the Airbender guest. The third tool, `state_transition`, runs a block natively, outside any zkVM.
 
 ## z6m_prover (Hypercube)
 
-The release ships this binary as `z6m_prover_hypercube`. `make z6m_prover` builds it at `prover/target/release/z6m_prover`. It has three forms:
+The release ships this binary as `z6m_prover_hypercube`, and `make z6m_prover` builds it at `prover/target/release/z6m_prover`. You can run it in three forms:
 
 ```bash
 z6m_prover --service [flags]         # fetch, execute and prove in a loop
@@ -18,7 +20,7 @@ z6m_prover --test-service [flags]    # execute downloaded blocks or EEST fixture
 z6m_prover <subcommand> [flags]      # fetch, execute, prove, setup or verify once
 ```
 
-With no mode and no subcommand it exits with an error. It loads a `.env` file from the working directory at startup.
+Given no mode and no subcommand, it exits with an error. At startup it loads a `.env` file from the working directory.
 
 ### Top-level flags
 
@@ -52,32 +54,32 @@ With no mode and no subcommand it exits with an error. It loads a `.env` file fr
 | `setup` | `--pk-path`, `--vk-path` | No-op. Nothing is written. |
 | `verify` | `--proof-path`, `--vk-path` | No-op. No verification runs. |
 
-`execute` and `prove` read `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`. With `--is-test` they read `ethTests<N>.json` as an EEST fixture. `--file-name` overrides the block-number lookup.
+By default, `execute` and `prove` read `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`. With `--is-test` they read `ethTests<N>.json` as an EEST fixture instead, and `--file-name` overrides the block-number lookup.
 
-`execute` prints `Executed block <N> (gas_used=..., cycles=..., prover_gas=..., syscall_count=...)`. It appends a line to `<data-dir>/executionLogs.log`. It exits 1 when `gas_used` is 0.
+When `execute` finishes, it prints `Executed block <N> (gas_used=..., cycles=..., prover_gas=..., syscall_count=...)` and appends a line to `<data-dir>/executionLogs.log`. It exits 1 when `gas_used` is 0.
 
-`--geth` exists only on `fetch`. The service always reads the reth and alloy witness shape.
+`--geth` exists only on `fetch`; the service always reads the reth and alloy witness shape.
 
-Limits of `prove` as of `v0.1.0-alpha.7`:
+Before you reach for `prove`, know its limits as of `v0.1.0-alpha.7`:
 
-- It always uses the CUDA prover in compressed mode. It ignores `SP1_PROVER` and `--proof-type`.
+- It always uses the CUDA prover in compressed mode, and ignores `SP1_PROVER` and `--proof-type`.
 - It discards the proof. Nothing is written to disk, and the summary line prints `gas_used=0` and an empty path.
-- A key setup failure prints `ERROR` and still exits 0. A proving failure is not reported.
+- A key setup failure prints `ERROR` but still exits 0, and a proving failure is not reported at all.
 - It never posts to Ethproofs.
 
-Use `--service` to get proof files.
+If you need proof files, use `--service`.
 
 ### Environment variables
 
-- `SP1_PROVER` selects the service-mode backend. Only `cuda` is special-cased, as the local GPU prover. Any other value, or none, gives the CPU prover. `execute` always uses the CPU, and `prove` always uses CUDA.
-- `NETWORK_PRIVATE_KEY` is listed in `.env.example` for the Succinct Prover Network. It is unused, because `network` and `mock` modes are not wired up.
-- `RUST_LOG` sets the log filter. It defaults to `warn`.
+- `SP1_PROVER` selects the service-mode backend. Only `cuda` is special-cased, as the local GPU prover; any other value, or none, gives you the CPU prover. `execute` always uses the CPU, and `prove` always uses CUDA.
+- `NETWORK_PRIVATE_KEY` appears in `.env.example` for the Succinct Prover Network, but nothing reads it, because `network` and `mock` modes are not wired up.
+- `RUST_LOG` sets the log filter, which defaults to `warn`.
 
-The Ethproofs settings are flags only. This binary reads no `ETHPROOFS_*` variables.
+For Ethproofs, pass the flags. This binary reads no `ETHPROOFS_*` variables.
 
 ## z6m_prover_airbender
 
-`make z6m_prover_airbender` builds it at `prover/prover_airbender/target/release/z6m_prover_airbender`. The image `ghcr.io/erigontech/zilkworm-airbender` ships it with the guest. It runs as `--service`, as `--test-service`, or with one subcommand.
+`make z6m_prover_airbender` builds this one at `prover/prover_airbender/target/release/z6m_prover_airbender`, and the image `ghcr.io/erigontech/zilkworm-airbender` ships it together with the guest. Like the Hypercube host, it runs as `--service`, as `--test-service`, or with one subcommand.
 
 ### Top-level flags
 
@@ -113,9 +115,9 @@ The Ethproofs settings are flags only. This binary reads no `ETHPROOFS_*` variab
 | `bench` | `--file-name` (required), `--iterations` (default 5), `--backend` | Prove one MFBD file repeatedly with one prover. Print each time and the min, median and max. |
 | `verify` | `--proof`, `--vk`, and `--file-name` or `--block-hash` | Verify the proof against the key. Check that its output is the hash of the input's last valid block, or the given hash. |
 
-Without `--file-name`, input comes from `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`. If that file is missing, the legacy `unifiedBlockAndStateRlp<N>.bin` is tried. With `--is-test` the input is an EEST JSON fixture. Proof files are gzip EPROOF01 v2. The `cpu` backend is slow; [Airbender prover](../provers/airbender-prover.md) gives its memory need.
+Without `--file-name`, input comes from `<data-dir>/blocks/<N>/flatWitnessBundle<N>.mfbd`, and if that file is missing the prover tries the legacy `unifiedBlockAndStateRlp<N>.bin`. With `--is-test` the input is an EEST JSON fixture. Proof files are gzip EPROOF01 v2. The `cpu` backend is slow, and [Airbender prover](../provers/airbender-prover.md) gives its memory need.
 
-`execute` and `--test-service` append to the execution log. `execute` warns when a run has more cycles than the prover takes.
+Both `execute` and `--test-service` append to the execution log, and `execute` warns you when a run has more cycles than the prover takes.
 
 ### Environment variables
 
@@ -131,7 +133,7 @@ Without `--file-name`, input comes from `<data-dir>/blocks/<N>/flatWitnessBundle
 
 ### Docker entrypoint
 
-The image's entrypoint runs the prover with any arguments you pass, plus `--guest-bin`. With no arguments it runs the service from the environment. It first computes the verification key into `$DATA_DIR/vk-<rev>-<id>/vk.bin`. Then it runs `--service --gpu` and restarts the service whenever it exits. Proofs go to `$DATA_DIR/proofs/<N>/proof.bin`.
+The image's entrypoint runs the prover with any arguments you pass, plus `--guest-bin`. If you pass none, it runs the service from the environment variables below. It first computes the verification key into `$DATA_DIR/vk-<rev>-<id>/vk.bin`, then runs `--service --gpu` and restarts the service whenever it exits. Proofs go to `$DATA_DIR/proofs/<N>/proof.bin`.
 
 | Variable | Default | Effect |
 |---|---|---|
@@ -149,13 +151,13 @@ The image's entrypoint runs the prover with any arguments you pass, plus `--gues
 
 ## state_transition
 
-`state_transition` runs the whole state transition natively. The release ships it as `state_transition_linux_x86_64`. A local build puts it at `build/zilk_core/dev/cli/state_transition`.
+`state_transition` runs the whole state transition natively. You get it from a release as `state_transition_linux_x86_64`, or from a local build at `build/zilk_core/dev/cli/state_transition`.
 
 ```bash
 state_transition <flatWitnessBundle.mfbd>|<test.json>|<test_dir>
 ```
 
-A path ending in `.json` runs as an EEST blockchain test. Any other file runs as an MFBD bundle. A directory is scanned recursively. For a bundle it prints `Cumulative Gas Used: <n>`, `FAIL: <path>` or `SKIP: <path>`.
+The tool picks its mode from the path. A path ending in `.json` runs as an EEST blockchain test, any other file runs as an MFBD bundle, and a directory is scanned recursively. For a bundle it prints `Cumulative Gas Used: <n>`, `FAIL: <path>` or `SKIP: <path>`.
 
 | Exit code | Meaning |
 |---|---|
@@ -165,7 +167,7 @@ A path ending in `.json` runs as an EEST blockchain test. Any other file runs as
 | 3 | The bundle could not be read, or an exception was thrown. |
 | 4 | An unknown exception. |
 
-Directory mode only picks up `.json` and `.bin` files, so a directory of `.mfbd` files runs nothing and exits 2. Pass bundles one at a time instead.
+Watch out for directory mode. It only picks up `.json` and `.bin` files, so a directory of `.mfbd` files runs nothing and exits 2; pass bundles one at a time instead.
 
 ## Further reading
 

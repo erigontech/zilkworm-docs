@@ -3,7 +3,7 @@ import Link from '@docusaurus/Link';
 import {TerminalFrame, TerminalRow} from '@site/src/components/TerminalList';
 
 const cards = [
-  {label: 'Overview',           desc: 'what Zilkworm ships, where to start',      to: '/'},
+  {label: 'Overview',           desc: 'what Zilkworm ships and where to start',  to: '/'},
   {label: 'Choosing a prover',  desc: 'which prover to run',                      to: '/provers/choosing-a-prover'},
   {label: 'Execution pipeline', desc: 'block and witness in, proof out',          to: '/inside-the-guest/execution-pipeline'},
   {label: 'CLI reference',      desc: 'flags, subcommands, env vars, exit codes', to: '/reference/cli-reference'},
@@ -32,12 +32,12 @@ export default function NotFoundContent(): React.ReactElement {
           fontSize: '1.05rem', color: 'var(--ifm-color-emphasis-700)',
           maxWidth: '480px', margin: '0 auto 2.5rem', lineHeight: 1.65,
         }}>
-          This page does not exist or has moved. Pick a page below to keep reading.
+          This page does not exist, or it has moved. Pick one of the pages below and keep reading.
         </p>
 
         <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap'}}>
           <Link to="/" className="button-404-primary">Back to docs</Link>
-          <a href="https://erigon.tech/contact/" target="_blank" rel="noopener noreferrer" className="button-404-secondary">Contact Us</a>
+          <a href="https://erigon.tech/contact/" target="_blank" rel="noopener noreferrer" className="button-404-secondary">Contact us</a>
         </div>
       </section>
 

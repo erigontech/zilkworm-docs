@@ -6,13 +6,15 @@ sidebar_position: 4
 
 # Proof guarantees
 
-A proof says that one guest ELF ran on some input and committed some public values. The verifying key names the ELF. The public values say what the run found. What a consumer can trust depends on both, and on what the host checks.
+This page tells you what a Zilkworm proof lets you trust, guest by guest, and what you still have to check yourself.
+
+A proof says that one guest ELF ran on some input and committed some public values. The verifying key names the ELF, and the public values say what the run found. What you can trust depends on both, and on how much the host checks.
 
 ## Public values per guest
 
 ### Hypercube MFBD guest, 112 bytes
 
-The Hypercube MFBD guest commits 112 bytes. A release publishes it as `z6m_guest_hypercube_mfbd`.
+A release publishes this guest as `z6m_guest_hypercube_mfbd`, and it commits 112 bytes.
 
 | Offset | Bytes | Field | Meaning |
 |---|---|---|---|
@@ -26,7 +28,7 @@ The ZisK guest on draft PR #86 commits the same 112 bytes, in ZisK output slots 
 
 ### HashState guest, 43 bytes
 
-On `statelessInputBytes` input, the HashState guest commits the SSZ `StatelessValidationResult`. This is the ERE guest, `stateless-validator-zilkworm-sp1-<SP1 version>`.
+The HashState guest is the ERE guest, `stateless-validator-zilkworm-sp1-<SP1 version>`. On `statelessInputBytes` input, it commits the SSZ `StatelessValidationResult`.
 
 | Offset | Bytes | Field | Meaning |
 |---|---|---|---|
@@ -35,41 +37,39 @@ On `statelessInputBytes` input, the HashState guest commits the SSZ `StatelessVa
 | 33 | 8 | `chain_id` | The chain ID, little-endian |
 | 41 | 2 | `schema_id` | The input schema id, little-endian |
 
-A rejected block still yields a result, with `successful_validation` set to 0. Only an input that does not decode gives the all-zero result. On EJSN input, the same guest writes the 112-byte layout above.
+A rejected block still yields a result, with `successful_validation` set to 0. Only an input that does not decode gives the all-zero result. On EJSN input, the same guest writes the 112-byte layout above instead.
 
 ### Airbender guest, 32 bytes
 
-The Airbender guest commits the hash of the last block it validated. It writes the hash's bytes in order, as little-endian words, to registers `a0` to `a7`. The hash binds the parent's state root and the block's post-state root, gas used and receipts root.
+The Airbender guest commits the hash of the last block it validated. It writes the hash's bytes in order, as little-endian words, to registers `a0` to `a7`. Small as it is, that hash binds the parent's state root and the block's post-state root, gas used and receipts root.
 
-The value is zero when the run validated no block. That happens on an EJSN success, or on an MFBD whose every block is flagged expected-invalid. A failed or skipped run ends at `finish_error` and commits nothing, so it cannot be proven.
+The value is zero when the run validated no block, which happens on an EJSN success or on an MFBD whose every block is flagged expected-invalid. A failed or skipped run ends at `finish_error` and commits nothing, so it cannot be proven.
 
 ## Checks inside the guest
 
-Before a DirectState guest commits, it checks the chain it ran:
+Before a DirectState guest commits, it checks the chain it ran. It takes the pre-state root from the parent header that the first block names and requires each later block to extend the one before it. It also checks each header's state root and gas used against the run.
 
-- It takes the pre-state root from the parent header that the first block names.
-- It requires each later block to extend the one before it.
-- It checks each header's state root and gas used against the run.
+An MFBD envelope can hold several bundles, each its own chain. In that case the public values cover only the last validated block's bundle.
 
-An MFBD envelope can hold several bundles, each its own chain. The public values then cover the last validated block's bundle only.
-
-The HashState guest checks that the witness headers chain by parent hash and end at the block's parent. Every account and storage read is checked against the parent state root. The guest rejects the block on a read it cannot confirm, or on a malformed witness. It accepts the block only if the folded post-state root matches the header.
+The HashState guest checks that the witness headers chain by parent hash and end at the block's parent. Every account and storage read is checked against the parent state root. The guest rejects the block on a read it cannot confirm, or on a malformed witness, and it accepts the block only if the folded post-state root matches the header.
 
 ## Checks in each host
 
-The hosts check the public values to different degrees.
+The hosts check the public values to very different degrees:
 
-- The Airbender host derives the expected block hash from the input. It fails `execute`, `prove`, `verify`, `--test-service` and `--service` when the guest commits another.
-- The Hypercube host parses the 112 bytes and logs them. It does not compare them with the input or with a node.
-- The ERE harness, ere-hosts, compares the 43 bytes with the fixture's `statelessOutputBytes`. It records the result as `output_matched`.
+- The Airbender host derives the expected block hash from the input. When the guest commits another, it fails `execute`, `prove`, `verify`, `--test-service` and `--service`.
+- The Hypercube host parses the 112 bytes and logs them, but it does not compare them with the input or with a node.
+- The ERE harness, ere-hosts, compares the 43 bytes with the fixture's `statelessOutputBytes` and records the result as `output_matched`.
 
-A consumer that needs a Hypercube proof to match the chain compares `block_hash` and `post_state_root` with a node itself.
+So if you need a Hypercube proof to match the chain, compare `block_hash` and `post_state_root` with a node yourself.
 
 ## Keys and guest builds
 
-The verifying key is derived from the guest ELF, so a new guest build gets a new key. Each release publishes the key of each guest next to the guest. Build flags count too. The Hypercube MFBD guest is built with `USE_HASH_KEY=OFF` and the Airbender guest with `USE_HASH_KEY=ON`, and the key depends on that flag. The Airbender key also depends on the recursion verifier programs. Its prover accepts only their default `RECURSION_*_BLAKE` modes.
+The verifying key is derived from the guest ELF, so every new guest build gets a new key. Each release publishes the key of each guest right next to the guest.
 
-A zkVM update can rotate keys without any guest change. SP1 v6.9.0 loads a guest's initial memory differently from v6.6.0. SP1 keys published for alpha.6 therefore do not verify alpha.7 proofs. In the same release, a DirectState runner fix changed the MFBD and Airbender keys but not the ERE guest's key.
+Build flags count too. The Hypercube MFBD guest is built with `USE_HASH_KEY=OFF` and the Airbender guest with `USE_HASH_KEY=ON`, and the key depends on that flag. The Airbender key also depends on the recursion verifier programs, and its prover accepts only their default `RECURSION_*_BLAKE` modes.
+
+Keys can also rotate without any guest change, when the zkVM itself moves. SP1 v6.9.0 loads a guest's initial memory differently from v6.6.0, so SP1 keys published for alpha.6 do not verify alpha.7 proofs. In the same release, a DirectState runner fix changed the MFBD and Airbender keys but left the ERE guest's key alone.
 
 :::warning
 Verify a proof with the key from the release that built its guest. Keys can change between releases even when the guest code does not.
@@ -77,11 +77,11 @@ Verify a proof with the key from the release that built its guest. Keys can chan
 
 ## Out of scope
 
-A proof covers execution of the input it was given. It does not cover:
+A proof covers execution of the input it was given, and nothing more. It does not cover:
 
-- Consensus validity. The proof does not say the block is canonical or attested.
-- Blob availability. The guest never sees blob data, so the proof does not say the blobs were published.
-- The parent header's origin. The guest anchors to the parent header in its input. A verifier checks the committed roots or block hash against a trusted node.
+- Consensus validity. Nothing in the proof says the block is canonical or attested.
+- Blob availability. The guest never sees blob data, so the proof cannot say the blobs were published.
+- The parent header's origin. The guest anchors to the parent header in its input, so a verifier checks the committed roots or block hash against a trusted node.
 
 ## Further reading
 

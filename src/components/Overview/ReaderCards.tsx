@@ -5,19 +5,19 @@ import styles from './styles.module.css';
 const paths = [
   {
     label: 'Run a prover',
-    body: 'Compare the provers, then start one on your hardware.',
+    body: 'See how the provers differ, then start one on your own hardware.',
     page: 'Choosing a prover',
     to: '/provers/choosing-a-prover',
   },
   {
     label: 'Understand the proof',
-    body: 'Follow a block from witness to public values to proof.',
+    body: 'Follow one block from its witness, through the guest, to a proof.',
     page: 'Execution pipeline',
     to: '/inside-the-guest/execution-pipeline',
   },
   {
     label: 'Build and test',
-    body: 'Build the guests and hosts, then run the unit tests.',
+    body: 'Build the guests and hosts yourself, then run the unit tests.',
     page: 'Building from source',
     to: '/reference/building-from-source',
   },
