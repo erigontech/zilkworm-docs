@@ -13,7 +13,7 @@ const sidebars: SidebarsConfig = {
         description: 'Pick a prover, run it, and post its proofs to Ethproofs.',
       },
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: [
         'provers/choosing-a-prover',
         'provers/airbender-prover',
@@ -31,7 +31,7 @@ const sidebars: SidebarsConfig = {
         description: 'See what the guest reads, runs and commits, and what its proof guarantees.',
       },
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: [
         'inside-the-guest/execution-pipeline',
         'inside-the-guest/witness-formats',
@@ -48,7 +48,7 @@ const sidebars: SidebarsConfig = {
         description: 'Check the guests against the execution spec tests, QEMU runs and ERE fixtures.',
       },
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: [
         'testing/execution-spec-tests',
         'testing/riscv-tests-under-qemu',
@@ -64,7 +64,7 @@ const sidebars: SidebarsConfig = {
         description: 'Look up CLI flags, release assets, build steps and CI workflows.',
       },
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: [
         'reference/cli-reference',
         'reference/releases-and-assets',
