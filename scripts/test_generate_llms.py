@@ -71,13 +71,28 @@ class FrontmatterTests(unittest.TestCase):
 
 
 class UrlForTests(unittest.TestCase):
-    def test_index_maps_to_route_base(self):
+    def test_site_root(self):
+        self.assertEqual(g.SITE_URL, "https://zilkworm.erigon.tech")
+        self.assertEqual(g.ROUTE_BASE, "")
+
+    def test_index_maps_to_site_root(self):
         url = g.url_for(g.DOCS_DIR / "index.md")
-        self.assertEqual(url, f"{g.SITE_URL}{g.ROUTE_BASE}")
+        self.assertEqual(url, "https://zilkworm.erigon.tech/")
 
     def test_nested_page(self):
-        url = g.url_for(g.DOCS_DIR / "getting-started" / "install.md")
-        self.assertEqual(url, f"{g.SITE_URL}{g.ROUTE_BASE}/getting-started/install")
+        url = g.url_for(g.DOCS_DIR / "provers" / "hypercube-prover.md")
+        self.assertEqual(url, "https://zilkworm.erigon.tech/provers/hypercube-prover")
+
+
+class OrderTests(unittest.TestCase):
+    def test_pages_follow_sidebar_order(self):
+        pages = g.collect_pages()
+        self.assertEqual(pages[0]["url"], "https://zilkworm.erigon.tech/")
+        sections = []
+        for p in pages[1:]:
+            if not sections or sections[-1] != p["section"]:
+                sections.append(p["section"])
+        self.assertEqual(sections, ["Provers", "Inside the guest", "Testing", "Reference"])
 
 
 if __name__ == "__main__":

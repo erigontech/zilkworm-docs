@@ -25,8 +25,7 @@ const IconLinkedIn = () => (
   </svg>
 );
 
-/* Monospace throughout — the footer's terminal motif, matching the site's
-   monospace navbar/sidebar/TOC. The Quantify wordmark is the one exception. */
+/* Monospace throughout; the Quantify wordmark is the exception. */
 const MONO = 'var(--ifm-font-family-monospace)';
 /* -700 not -600: -600 is only 3.06:1 on the light surface (AA needs 4.5:1). */
 const FINE_BASE = 'var(--ifm-color-emphasis-700)';
@@ -43,7 +42,7 @@ export default function Footer(): React.ReactElement {
       borderTop: '2px solid var(--ifm-color-primary)',
       fontFamily: MONO,
     }}>
-      {/* Top section — single horizontal line */}
+      {/* Top section: one horizontal line */}
       <div className="footer-top-grid" style={{
         maxWidth: '1280px',
         margin: '0 auto',
@@ -55,26 +54,14 @@ export default function Footer(): React.ReactElement {
         flexWrap: 'wrap',
       }}>
 
-        {/* Brand lockup — image logo + wordmark, links to the corporate home
-            page. One anchor wraps both so it is a single hit target. */}
+        {/* Erigon lockup: one anchor, one hit target. */}
         <a href="https://erigon.tech" target="_blank" rel="noopener noreferrer"
           aria-label="Erigon home page" className="footer-brand">
           <img src={logoUrl} alt="Erigon" style={{height: '32px', width: 'auto'}} />
           <span style={{fontFamily: "'Quantify', sans-serif", fontWeight: 700, fontSize: '1rem', letterSpacing: '0.04em'}}>erigon.tech</span>
         </a>
 
-        {/* Blurb */}
-        <p style={{
-          fontSize: '0.875rem',
-          color: 'var(--ifm-color-emphasis-700)',
-          lineHeight: 1.6,
-          margin: 0,
-          maxWidth: '360px',
-        }}>
-          Building the future on the efficient software frontier.
-        </p>
-
-        {/* Social icon row — right aligned */}
+        {/* Social icon row */}
         <div className="footer-socials">
           {[
             {label: 'X / Twitter', href: 'https://x.com/erigoneth', Icon: IconX},

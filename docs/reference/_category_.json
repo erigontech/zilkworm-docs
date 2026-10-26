@@ -1,0 +1,11 @@
+{
+  "label": "Reference",
+  "position": 5,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "slug": "/reference",
+    "description": "Look up a flag, a release asset, a build step or a CI workflow when you need it."
+  }
+}

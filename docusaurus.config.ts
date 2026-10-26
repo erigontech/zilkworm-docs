@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Zilkworm Documentation',
-  tagline: 'A native, lightweight, performant ZKEVM core written in C++',
+  tagline: 'Stateless Ethereum block execution, proved in a zkVM',
   favicon: 'img/favicon.ico',
   url: 'https://zilkworm.erigon.tech',
   baseUrl: '/',
@@ -59,11 +59,36 @@ const config: Config = {
       {
         hashed: true,
         language: ['en'],
-        docsRouteBasePath: ['/documentation'],
+        docsRouteBasePath: ['/'],
         indexDocs: true,
         indexBlog: false,
         indexPages: false,
         searchBarPosition: 'right',
+      },
+    ],
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        // Old /documentation and /collaboration URLs.
+        redirects: [
+          {from: '/documentation', to: '/'},
+          {from: '/documentation/getting-started/how-it-works', to: '/inside-the-guest/execution-pipeline'},
+          {from: '/documentation/getting-started/quickstart-hypercube', to: '/provers/hypercube-prover'},
+          {from: '/documentation/getting-started/running-the-prover', to: '/provers/hypercube-prover'},
+          {from: '/documentation/getting-started/airbender-prover', to: '/provers/airbender-prover'},
+          {from: '/documentation/getting-started/ethproofs-prover', to: '/provers/ethproofs-posting'},
+          {from: '/documentation/getting-started/cli-reference', to: '/reference/cli-reference'},
+          {from: '/documentation/getting-started/zisk-prover', to: '/provers/zisk-prover'},
+          {from: '/documentation/fundamentals/background', to: '/inside-the-guest/execution-pipeline'},
+          {from: '/documentation/fundamentals/witness-formats', to: '/inside-the-guest/witness-formats'},
+          {from: '/documentation/fundamentals/write-your-own-rollups-using-zilkworm', to: '/'},
+          {from: '/documentation/testing/ethereum-execution-tests-eests', to: '/testing/execution-spec-tests'},
+          {from: '/documentation/testing/riscv-testing-eests-on-rv32im-via-qemu', to: '/testing/riscv-tests-under-qemu'},
+          {from: '/documentation/development/releases', to: '/reference/releases-and-assets'},
+          {from: '/documentation/development/building-and-testing', to: '/reference/building-from-source'},
+          {from: '/documentation/development/benchmarks-and-ci', to: '/reference/benchmarks-and-ci'},
+          {from: '/collaboration', to: '/'},
+        ],
       },
     ],
   ],
@@ -74,7 +99,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          routeBasePath: '/documentation',
+          routeBasePath: '/',
           path: 'docs',
         },
         blog: false as false,
@@ -89,7 +114,7 @@ const config: Config = {
 
   themeConfig: {
     metadata: [
-      {name: 'description', content: 'Official documentation for Zilkworm — a native, lightweight, performant ZKEVM core written in C++.'},
+      {name: 'description', content: 'Zilkworm documentation: stateless Ethereum block execution, proved in a zkVM.'},
       {name: 'theme-color', content: '#1F9D3E'},
       {property: 'og:type', content: 'website'},
       {property: 'og:site_name', content: 'Zilkworm Documentation'},
@@ -106,20 +131,9 @@ const config: Config = {
       },
       items: [
         {
-          type: 'docSidebar',
-          sidebarId: 'documentation',
-          position: 'left',
-          label: 'Documentation',
-        },
-        {
-          to: '/collaboration',
-          label: 'Collaboration',
-          position: 'left',
-        },
-        {
-          type: 'html',
+          href: 'https://zilkworm.hashnode.dev',
+          label: 'Blog',
           position: 'right',
-          value: '<a href="https://zilkworm.hashnode.dev" target="_blank" rel="noopener noreferrer" class="navbar-blog-btn" aria-label="Blog">Blog</a>',
         },
         {
           type: 'html',

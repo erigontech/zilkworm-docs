@@ -1,12 +1,13 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
+import {TerminalFrame, TerminalRow} from '@site/src/components/TerminalList';
 
 const cards = [
-  {label: 'Welcome',         desc: 'Start here — overview of Zilkworm and the documentation map.', to: '/documentation'},
-  {label: 'How it works',    desc: 'Technical details of the prover pipeline.',                    to: '/documentation/getting-started/how-it-works'},
-  {label: 'Quickstart',      desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/getting-started/quickstart-hypercube'},
-  {label: 'CLI Reference',   desc: 'Every zilkworm command, flag, and environment variable.',      to: '/documentation/getting-started/cli-reference'},
-  {label: 'GitHub',          desc: 'Source code, issues, and releases.',                           href: 'https://github.com/erigontech/zilkworm'},
+  {label: 'Overview',           desc: 'what Zilkworm ships and where to start',  to: '/'},
+  {label: 'Choosing a prover',  desc: 'which prover to run',                      to: '/provers/choosing-a-prover'},
+  {label: 'Execution pipeline', desc: 'block and witness in, proof out',          to: '/inside-the-guest/execution-pipeline'},
+  {label: 'CLI reference',      desc: 'flags, subcommands, env vars, exit codes', to: '/reference/cli-reference'},
+  {label: 'GitHub',             desc: 'source, issues and releases',              href: 'https://github.com/erigontech/zilkworm'},
 ];
 
 export default function NotFoundContent(): React.ReactElement {
@@ -31,17 +32,17 @@ export default function NotFoundContent(): React.ReactElement {
           fontSize: '1.05rem', color: 'var(--ifm-color-emphasis-700)',
           maxWidth: '480px', margin: '0 auto 2.5rem', lineHeight: 1.65,
         }}>
-          The page you are looking for does not exist or has been moved. Use the links below to navigate the Zilkworm documentation.
+          This page does not exist, or it has moved. Pick one of the pages below and keep reading.
         </p>
 
         <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap'}}>
-          <Link to="/" className="button-404-primary">Back to Docs</Link>
-          <a href="https://erigon.tech/contact/" target="_blank" rel="noopener noreferrer" className="button-404-secondary">Contact Us</a>
+          <Link to="/" className="button-404-primary">Back to docs</Link>
+          <a href="https://erigon.tech/contact/" target="_blank" rel="noopener noreferrer" className="button-404-secondary">Contact us</a>
         </div>
       </section>
 
-      {/* Cards */}
-      <section style={{maxWidth: '1100px', margin: '0 auto', padding: '3rem 2rem 5rem'}}>
+      {/* Links */}
+      <section style={{maxWidth: '800px', margin: '0 auto', padding: '3rem 2rem 5rem'}}>
         <h2 style={{
           fontFamily: "'Montserrat', sans-serif", fontWeight: 800,
           fontSize: '1.1rem', marginBottom: '1.5rem',
@@ -50,21 +51,11 @@ export default function NotFoundContent(): React.ReactElement {
         }}>
           Where would you like to go?
         </h2>
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem'}}>
-          {cards.map(({label, desc, to, href}) => {
-            const inner = (
-              <>
-                <div style={{fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.35rem', color: 'var(--ifm-font-color-base)'}}>{label}</div>
-                <div style={{fontSize: '0.85rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>{desc}</div>
-              </>
-            );
-            return href ? (
-              <a key={label} href={href} target="_blank" rel="noopener noreferrer" className="card-404">{inner}</a>
-            ) : (
-              <Link key={label} to={to!} className="card-404">{inner}</Link>
-            );
-          })}
-        </div>
+        <TerminalFrame>
+          {cards.map(({label, desc, to, href}) => (
+            <TerminalRow key={label} href={href ?? to!} title={label} description={desc} external={!!href} />
+          ))}
+        </TerminalFrame>
       </section>
     </main>
   );

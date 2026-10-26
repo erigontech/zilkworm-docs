@@ -1,0 +1,11 @@
+{
+  "label": "Inside the guest",
+  "position": 3,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "slug": "/inside-the-guest",
+    "description": "Learn what the guest reads, how it runs a block, and what a proof of that run tells you."
+  }
+}

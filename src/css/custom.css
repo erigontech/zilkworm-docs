@@ -3,7 +3,7 @@
  * Primary: #1F9D3E (Zilkworm Green), Hover: #1C8E38
  * The green body theme is Zilkworm-specific — a deliberate deviation from
  * the shared Erigon palette introduced in PRs #12 / #16. In the footer, green
- * drives the social and legal hovers; only the brand lockup hovers Erigon
+ * drives the link and legal hovers; only the brand lockup hovers Erigon
  * Orange, via the footer-scoped --footer-accent. See design spec §6.2 for this
  * site's terminal footer variant.
  * Light bg: #FFFFFF, Dark bg: #0A0A0A
@@ -86,7 +86,7 @@
 }
 
 [data-theme='dark'] {
-  /* Same orange scale — readable on dark */
+  /* Same green scale, readable on dark */
   --ifm-color-primary: #1F9D3E;
   --ifm-color-primary-dark: #1C8E38;
   --ifm-color-primary-darker: #1A8534;
@@ -157,64 +157,6 @@ html {
   scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
 }
 
-/* ─── Shared landing-page card grid ─────────────────────────────────────── */
-
-.lp-hero {
-  padding: 2rem 0 1.5rem;
-}
-.lp-hero h1 {
-  font-size: 2.25rem;
-  margin: 0 0 0.75rem !important;
-}
-.lp-hero p {
-  font-size: 1.05rem;
-  color: var(--ifm-color-emphasis-700);
-  max-width: 560px;
-  margin: 0 !important;
-  line-height: 1.6;
-}
-.lp-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
-  margin-top: 2rem;
-}
-.lp-card {
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  text-decoration: none !important;
-  color: inherit !important;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  background: var(--ifm-background-surface-color, var(--ifm-background-color));
-}
-.lp-card:hover {
-  border-color: #1F9D3E;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
-}
-.lp-icon {
-  width: 2rem;
-  height: 2rem;
-  margin-bottom: 1rem;
-  color: #1F9D3E;
-  flex-shrink: 0;
-}
-.lp-card-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 0.4rem !important;
-  color: var(--ifm-font-color-base);
-}
-.lp-card-desc {
-  font-size: 0.875rem;
-  margin: 0 !important;
-  color: var(--ifm-color-emphasis-700);
-  line-height: 1.55;
-}
-
 /* ─── Navbar ──────────────────────────────────────────────────────────────── */
 
 .navbar__logo img {
@@ -255,46 +197,6 @@ html {
   color: #1F9D3E !important;
 }
 
-.navbar-blog-btn {
-  border: 1px solid var(--navbar-btn-border);
-  color: var(--navbar-btn-color) !important;
-  padding: 0.35rem 0.9rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-decoration: none !important;
-  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-.navbar-blog-btn:hover {
-  border-color: #1F9D3E;
-  color: #1F9D3E !important;
-  box-shadow: 0 0 12px rgba(31, 157, 62, 0.45);
-}
-
-.navbar-release-btn {
-  background: #1F9D3E;
-  color: #FFFFFF !important;
-  padding: 0.35rem 0.9rem;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  text-decoration: none !important;
-  transition: background 0.15s, box-shadow 0.15s;
-  white-space: nowrap;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-}
-.navbar-release-btn:hover {
-  background: #1C8E38;
-  color: #FFFFFF !important;
-  box-shadow: 0 0 14px rgba(31, 157, 62, 0.6);
-}
-
 /* ─── Navbar GitHub icon link ────────────────────────────────────────────── */
 
 .navbar-github-icon {
@@ -304,7 +206,7 @@ html {
   padding: 0.3rem;
   margin-left: 0.25rem;
   color: var(--navbar-btn-color);
-  border-radius: 6px;
+  border-radius: 0;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
 
@@ -326,12 +228,11 @@ html {
 /* ─── Pagination nav cards (prev/next) ───────────────────────────────────── */
 
 .pagination-nav__link {
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
+  box-shadow: none;
+  transition: border-color 0.2s ease !important;
 }
 .pagination-nav__link:hover {
   border-color: #1F9D3E !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
 }
 
 /* ─── Details / collapsible sections ─────────────────────────────────────── */
@@ -341,7 +242,7 @@ details.alert.alert--info {
   --ifm-alert-border-color: rgba(0, 0, 0, 0.1);
   background-color: rgba(0, 0, 0, 0.05) !important;
   border-color: rgba(0, 0, 0, 0.1) !important;
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
 }
 [data-theme='dark'] details.alert.alert--info {
@@ -361,32 +262,13 @@ details.alert.alert--info summary {
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* ─── 404 page cards ─────────────────────────────────────────────────────── */
-
-.card-404 {
-  display: flex;
-  flex-direction: column;
-  padding: 1.25rem 1.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  text-decoration: none !important;
-  color: inherit !important;
-  background: var(--ifm-background-surface-color, var(--ifm-background-color));
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-.card-404:hover {
-  border-color: #1F9D3E;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(31, 157, 62, 0.14);
-}
-
 /* ─── 404 page buttons ────────────────────────────────────────────────────── */
 
 .button-404-primary {
   background: #1F9D3E;
   color: #ffffff !important;
   padding: 0.65rem 1.6rem;
-  border-radius: 6px;
+  border-radius: 0;
   font-weight: 700;
   font-size: 0.95rem;
   text-decoration: none !important;
@@ -400,7 +282,7 @@ details.alert.alert--info summary {
   border: 1px solid var(--ifm-color-emphasis-300);
   color: var(--ifm-font-color-base) !important;
   padding: 0.65rem 1.6rem;
-  border-radius: 6px;
+  border-radius: 0;
   font-weight: 600;
   font-size: 0.95rem;
   text-decoration: none !important;
@@ -436,7 +318,7 @@ footer {
 
 /* Interactive states live here, not in React onMouseEnter/onMouseLeave. Those
    only fire for a mouse, so keyboard users tabbing the footer got no accent
-   state and no focus indicator. Socials and legal links hover Zilkworm Green
+   state and no focus indicator. Footer and legal links hover Zilkworm Green
    (the terminal identity); only the brand lockup hovers corporate orange. */
 .footer-brand {
   display: flex;
@@ -520,9 +402,6 @@ footer {
     gap: 1rem !important;
   }
 
-  /* Socials are pushed right by margin-left:auto on desktop; reset it so they
-     align with the brand once stacked. Targets the dedicated class, not
-     > div:last-child, which broke if another div were appended. */
   .footer-socials {
     margin-left: 0;
   }
@@ -586,7 +465,7 @@ footer {
 /* the box hugs the items (content height), with more margin OUTSIDE + padding INSIDE */
 .menu > .menu__list {
   border: 1px solid var(--ifm-toc-border-color);
-  border-radius: 8px;
+  border-radius: 0;
   margin: 1rem 0.75rem;
   padding: 0;
   height: fit-content;
@@ -708,8 +587,6 @@ footer {
 
 /* --- Navbar links + custom buttons: monospace (kept square above) --- */
 .navbar__link,
-.navbar-release-btn,
-.navbar-blog-btn,
 .breadcrumbs__link {
   font-family: var(--ifm-font-family-monospace);
 }
