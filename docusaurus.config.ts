@@ -131,11 +131,6 @@ const config: Config = {
       },
       items: [
         {
-          href: 'https://github.com/erigontech/zilkworm/releases',
-          label: 'Releases',
-          position: 'right',
-        },
-        {
           href: 'https://zilkworm.hashnode.dev',
           label: 'Blog',
           position: 'right',

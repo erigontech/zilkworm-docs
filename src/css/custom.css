@@ -368,6 +368,36 @@ footer {
   background-color: color-mix(in srgb, var(--brand-accent) 12%, transparent);
 }
 
+.footer-socials {
+  display: flex;
+  flex-direction: row;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.footer-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 0;
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.footer-social:hover,
+.footer-social:focus-visible {
+  color: var(--brand-accent);
+  border-color: var(--brand-accent);
+  /* Fallback first: color-mix() is Chrome/Edge 111+, Firefox 113+, Safari 16.2+.
+     Older engines keep the flat green tint instead of losing it silently. */
+  background-color: rgba(31, 157, 62, 0.12);
+  background-color: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+
 .footer-legal {
   font-size: 0.8rem;
   /* emphasis-700, not -600: on the white light-mode surface -600 measures
@@ -385,6 +415,7 @@ footer {
 
 .footer-brand:focus-visible,
 .footer-link:focus-visible,
+.footer-social:focus-visible,
 .footer-legal:focus-visible {
   outline: 2px solid var(--brand-accent);
   outline-offset: 2px;
