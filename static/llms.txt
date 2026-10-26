@@ -8,28 +8,28 @@
 
 ## Provers
 
-- [Choosing a prover](https://zilkworm.erigon.tech/provers/choosing-a-prover): Compare the Airbender, Hypercube and ZisK provers and the HashState guest by artifacts, hardware and status.
-- [Airbender prover](https://zilkworm.erigon.tech/provers/airbender-prover): Run the Airbender GPU prover from its Docker image to execute, prove and verify blocks.
-- [Hypercube prover](https://zilkworm.erigon.tech/provers/hypercube-prover): Run the SP1 Hypercube prover binary to execute or prove blocks with the MFBD guest.
-- [ZisK prover](https://zilkworm.erigon.tech/provers/zisk-prover): The ZisK backend lives in draft PR #86 and runs execute-only in CI.
-- [Ethproofs posting](https://zilkworm.erigon.tech/provers/ethproofs-posting): The Airbender and Hypercube services report queued, proving and proved blocks to Ethproofs when given three flags.
+- [Choosing a prover](https://zilkworm.erigon.tech/provers/choosing-a-prover): Compare the Airbender and Hypercube provers, the HashState guest and the ZisK backend by zkVM, artifacts, hardware and status.
+- [Airbender prover](https://zilkworm.erigon.tech/provers/airbender-prover): Run the Airbender GPU prover from its Docker image to follow the chain, prove blocks and post them to Ethproofs.
+- [Hypercube prover](https://zilkworm.erigon.tech/provers/hypercube-prover): Run the SP1 Hypercube prover binary to execute blocks with the MFBD guest or prove them on a GPU.
+- [ZisK prover](https://zilkworm.erigon.tech/provers/zisk-prover): The ZisK backend lives in draft PR #86, runs execute-only in CI and has had one GPU proving run.
+- [Ethproofs posting](https://zilkworm.erigon.tech/provers/ethproofs-posting): The Airbender and Hypercube services report each proved block to Ethproofs once an endpoint, a token and a cluster id are set.
 
 ## Inside the guest
 
-- [Execution pipeline](https://zilkworm.erigon.tech/inside-the-guest/execution-pipeline): A block goes from witness to guest execution to public values, and the proof ties them to one ELF.
-- [Witness formats](https://zilkworm.erigon.tech/inside-the-guest/witness-formats): Guests read MFBD bundles, SSZ statelessInputBytes or EJSN test fixtures, and host tools produce each one.
-- [Precompiles and syscalls](https://zilkworm.erigon.tech/inside-the-guest/precompiles-and-syscalls): Guests hand keccak, curve and big-integer work to SP1 ecalls or to Airbender and ZisK CSR precompiles.
-- [Proof guarantees](https://zilkworm.erigon.tech/inside-the-guest/proof-guarantees): Each guest commits a fixed public-values layout, and each host checks it to a different degree.
+- [Execution pipeline](https://zilkworm.erigon.tech/inside-the-guest/execution-pipeline): A host feeds a block and its witness to a RISC-V guest, the guest commits public values, and the proof ties them to one guest ELF.
+- [Witness formats](https://zilkworm.erigon.tech/inside-the-guest/witness-formats): Guests read MFBD bundles, raw SSZ statelessInputBytes or EJSN-wrapped test fixtures, and each format has its own producers.
+- [Precompiles and syscalls](https://zilkworm.erigon.tech/inside-the-guest/precompiles-and-syscalls): Each guest hands hashing and big-number math to its zkVM's circuits, through SP1 ecalls or Airbender and ZisK CSRs.
+- [Proof guarantees](https://zilkworm.erigon.tech/inside-the-guest/proof-guarantees): Each guest commits a fixed public-values layout, each host checks it to a different degree, and the verifying key ties a proof to one guest ELF.
 
 ## Testing
 
-- [Execution spec tests](https://zilkworm.erigon.tech/testing/execution-spec-tests): Zilkworm runs the Ethereum execution spec tests natively and under the Hypercube and Airbender guests.
-- [RISC-V tests under QEMU](https://zilkworm.erigon.tech/testing/riscv-tests-under-qemu): The execution spec tests also run on rv32im and rv64im builds under QEMU.
-- [ERE validation](https://zilkworm.erigon.tech/testing/ere-validation): The HashState guest runs in ERE to check outputs against fixtures and estimate SP1 proving cost.
+- [Execution spec tests](https://zilkworm.erigon.tech/testing/execution-spec-tests): Zilkworm runs the Ethereum execution spec tests natively and inside the Hypercube and Airbender guests, on a checksum-pinned fixture release.
+- [RISC-V tests under QEMU](https://zilkworm.erigon.tech/testing/riscv-tests-under-qemu): The execution spec tests also run on bare-metal rv32im and rv64im builds of the core under QEMU, to catch bugs that only show on RISC-V.
+- [ERE validation](https://zilkworm.erigon.tech/testing/ere-validation): The HashState guest runs in the ERE harness, which checks its output against each fixture and estimates its SP1 proving cost.
 
 ## Reference
 
-- [CLI reference](https://zilkworm.erigon.tech/reference/cli-reference): Look up the flags, subcommands and exit codes of z6m_prover, z6m_prover_airbender and state_transition.
-- [Releases and assets](https://zilkworm.erigon.tech/reference/releases-and-assets): Each release ships host binaries, guest images and verification keys, with its measured results.
-- [Building from source](https://zilkworm.erigon.tech/reference/building-from-source): Build the guests, host provers and native tools from source and run the unit tests.
-- [Benchmarks and CI](https://zilkworm.erigon.tech/reference/benchmarks-and-ci): GitHub workflows run the unit tests, EEST suites and 200-block benchmarks for the Hypercube and Airbender guests.
+- [CLI reference](https://zilkworm.erigon.tech/reference/cli-reference): Look up the flags, subcommands, environment variables and exit codes of the three Zilkworm tools.
+- [Releases and assets](https://zilkworm.erigon.tech/reference/releases-and-assets): Each Zilkworm release ships host binaries, guest images and verification keys, listed here with its measured results.
+- [Building from source](https://zilkworm.erigon.tech/reference/building-from-source): Build the native tools, the guests and the host provers from source, and run the unit tests.
+- [Benchmarks and CI](https://zilkworm.erigon.tech/reference/benchmarks-and-ci): Make targets benchmark the Hypercube, HashState, Airbender and ERE paths, and GitHub workflows run them.
