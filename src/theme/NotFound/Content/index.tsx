@@ -51,7 +51,7 @@ export default function NotFoundContent(): React.ReactElement {
         }}>
           Where would you like to go?
         </h2>
-        <TerminalFrame command="zilkworm docs /">
+        <TerminalFrame>
           {cards.map(({label, desc, to, href}) => (
             <TerminalRow key={label} href={href ?? to!} title={label} description={desc} external={!!href} />
           ))}

@@ -4,26 +4,18 @@ import Link from '@docusaurus/Link';
 import styles from './styles.module.css';
 
 type FrameProps = {
-  command: string;
   heading?: string;
   comment?: string;
   className?: string;
   children: ReactNode;
 };
 
-export function TerminalFrame({command, heading, comment, className, children}: FrameProps): ReactNode {
-  const commandLine = (
-    <>
-      <span className={styles.dollar} aria-hidden="true">$</span>
-      <span>{command}</span>
-    </>
-  );
+export function TerminalFrame({heading, comment, className, children}: FrameProps): ReactNode {
   return (
     <section className={clsx(styles.frame, className)}>
-      {heading ? (
+      {heading && (
         <header>
           <h1 className={styles.label}>{heading}</h1>
-          <div className={styles.line}>{commandLine}</div>
           {comment && (
             <p className={clsx(styles.line, styles.comment)}>
               <span aria-hidden="true">#</span>
@@ -31,8 +23,6 @@ export function TerminalFrame({command, heading, comment, className, children}: 
             </p>
           )}
         </header>
-      ) : (
-        <div className={clsx(styles.label, styles.line)}>{commandLine}</div>
       )}
       <ul className={styles.rows}>
         {React.Children.map(children, (child) => <li>{child}</li>)}

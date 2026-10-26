@@ -37,14 +37,6 @@ h1.label {
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.label.line {
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 1ch;
-  margin: -0.7em 0 0 0.75rem;
-  padding: 0 0.5rem;
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
 h1.label + .line {
   margin-top: 0.4rem;
 }
@@ -52,7 +44,6 @@ h1.label + .line {
   color: var(--ifm-color-emphasis-700);
 }
 
-.dollar,
 .prompt {
   color: var(--brand-accent);
   font-weight: 700;

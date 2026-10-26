@@ -39,7 +39,6 @@ function DocCategoryGeneratedIndexPageContent({
   categoryGeneratedIndex,
 }: Props): ReactNode {
   const category = useCurrentSidebarCategory();
-  const dir = (category.href ?? '').split('/').filter(Boolean).pop() ?? '';
   return (
     <div className={styles.generatedIndexPage}>
       <DocVersionBanner />
@@ -48,7 +47,6 @@ function DocCategoryGeneratedIndexPageContent({
       <article className="margin-top--lg">
         <TerminalFrame
           heading={categoryGeneratedIndex.title}
-          command={`zilkworm docs ${dir}/`}
           comment={categoryGeneratedIndex.description}>
           {filterDocCardListItems(category.items).map((item, index) => (
             <DocCard key={index} item={item} />
