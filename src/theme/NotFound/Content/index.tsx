@@ -2,11 +2,11 @@ import React from 'react';
 import Link from '@docusaurus/Link';
 
 const cards = [
-  {label: 'Welcome',         desc: 'Start here — overview of Zilkworm and the documentation map.', to: '/documentation'},
-  {label: 'How it works',    desc: 'Technical details of the prover pipeline.',                    to: '/documentation/getting-started/how-it-works'},
-  {label: 'Quickstart',      desc: 'Run the prover via the pre-built Docker image.',               to: '/documentation/getting-started/quickstart-hypercube'},
-  {label: 'CLI Reference',   desc: 'Every zilkworm command, flag, and environment variable.',      to: '/documentation/getting-started/cli-reference'},
-  {label: 'GitHub',          desc: 'Source code, issues, and releases.',                           href: 'https://github.com/erigontech/zilkworm'},
+  {label: 'Overview',           desc: 'What Zilkworm ships and where to start.',                  to: '/'},
+  {label: 'Choosing a prover',  desc: 'Compare Airbender, Hypercube and ZisK.',                   to: '/provers/choosing-a-prover'},
+  {label: 'Execution pipeline', desc: 'How a block becomes public values and a proof.',           to: '/inside-the-guest/execution-pipeline'},
+  {label: 'CLI reference',      desc: 'Flags, subcommands and exit codes for each binary.',       to: '/reference/cli-reference'},
+  {label: 'GitHub',             desc: 'Source code, issues and releases.',                        href: 'https://github.com/erigontech/zilkworm'},
 ];
 
 export default function NotFoundContent(): React.ReactElement {
@@ -31,11 +31,11 @@ export default function NotFoundContent(): React.ReactElement {
           fontSize: '1.05rem', color: 'var(--ifm-color-emphasis-700)',
           maxWidth: '480px', margin: '0 auto 2.5rem', lineHeight: 1.65,
         }}>
-          The page you are looking for does not exist or has been moved. Use the links below to navigate the Zilkworm documentation.
+          This page does not exist or has moved. Pick a page below to keep reading.
         </p>
 
         <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap'}}>
-          <Link to="/" className="button-404-primary">Back to Docs</Link>
+          <Link to="/" className="button-404-primary">Back to docs</Link>
           <a href="https://erigon.tech/contact/" target="_blank" rel="noopener noreferrer" className="button-404-secondary">Contact Us</a>
         </div>
       </section>

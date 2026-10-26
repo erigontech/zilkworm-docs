@@ -2,5 +2,10 @@
   "label": "Testing",
   "position": 4,
   "collapsible": true,
-  "collapsed": true
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "slug": "/testing",
+    "description": "Check the guests against the execution spec tests, QEMU runs and ERE fixtures."
+  }
 }

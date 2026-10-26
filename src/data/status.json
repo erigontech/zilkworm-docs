@@ -1,0 +1,7 @@
+{
+  "release": "v0.1.0-alpha.7",
+  "releaseUrl": "https://github.com/erigontech/zilkworm/releases/tag/v0.1.0-alpha.7",
+  "eestPin": "tests@v21.0.1",
+  "ethproofs": "Airbender live",
+  "ethproofsUrl": "https://ethproofs.org/provers"
+}

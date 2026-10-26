@@ -1,0 +1,11 @@
+{
+  "label": "Reference",
+  "position": 5,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "slug": "/reference",
+    "description": "Look up CLI flags, release assets, build steps and CI workflows."
+  }
+}

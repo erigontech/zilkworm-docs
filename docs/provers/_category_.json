@@ -1,0 +1,11 @@
+{
+  "label": "Provers",
+  "position": 2,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "slug": "/provers",
+    "description": "Pick a prover, run it, and post its proofs to Ethproofs."
+  }
+}

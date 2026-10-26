@@ -1,0 +1,11 @@
+{
+  "label": "Inside the guest",
+  "position": 3,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "slug": "/inside-the-guest",
+    "description": "See what the guest reads, runs and commits, and what its proof guarantees."
+  }
+}

@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 SITE_URL = "https://zilkworm.erigon.tech"
-ROUTE_BASE = "/documentation"
+ROUTE_BASE = ""
 DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
@@ -44,52 +44,63 @@ def strip_mdx(body: str) -> str:
     return body.strip()
 
 
-def load_category_label(folder: Path) -> str | None:
+def load_category(folder: Path) -> dict:
     cat = folder / "_category_.json"
     if cat.exists():
         try:
-            return json.loads(cat.read_text()).get("label")
+            return json.loads(cat.read_text())
         except json.JSONDecodeError:
-            return None
-    return None
+            return {}
+    return {}
+
+
+def _position(value: object) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("inf")
 
 
 def url_for(md_path: Path) -> str:
     rel = md_path.relative_to(DOCS_DIR).with_suffix("")
     parts = list(rel.parts)
     if parts == ["index"]:
-        return f"{SITE_URL}{ROUTE_BASE}"
+        return f"{SITE_URL}{ROUTE_BASE}/"
     return f"{SITE_URL}{ROUTE_BASE}/" + "/".join(parts)
 
 
 def collect_pages() -> list[dict[str, str]]:
-    pages: list[dict[str, str]] = []
+    """Pages in sidebar order: category position, then sidebar_position."""
+    keyed: list[tuple[tuple, dict[str, str]]] = []
     for md in sorted(DOCS_DIR.rglob("*.md")):
         text = md.read_text()
         fm, body = parse_frontmatter(text)
         title = fm.get("title", md.stem.replace("-", " ").title())
         desc = fm.get("description", "")
-        section_label = (
-            load_category_label(md.parent) if md.parent != DOCS_DIR else None
+        cat = load_category(md.parent) if md.parent != DOCS_DIR else {}
+        cat_pos = _position(cat.get("position")) if cat else 0.0
+        key = (cat_pos, str(md.parent), _position(fm.get("sidebar_position")), str(md))
+        keyed.append(
+            (
+                key,
+                {
+                    "title": title,
+                    "description": desc,
+                    "section": cat.get("label") or "",
+                    "url": url_for(md),
+                    "body": strip_mdx(body),
+                },
+            )
         )
-        pages.append(
-            {
-                "title": title,
-                "description": desc,
-                "section": section_label or "",
-                "url": url_for(md),
-                "body": strip_mdx(body),
-            }
-        )
-    return pages
+    return [page for _, page in sorted(keyed, key=lambda kv: kv[0])]
 
 
 def write_index(pages: list[dict[str, str]]) -> str:
     lines = ["# Zilkworm Documentation", ""]
     lines.append(
-        "> A native, lightweight, performant ZKEVM core written in C++. "
-        "Generates ZK proofs that an Ethereum block was executed correctly "
-        "without re-executing the block itself."
+        "> Stateless Ethereum block execution, proved in a zkVM. "
+        "Zilkworm compiles a C++ block execution engine to RISC-V guests, "
+        "and each proof covers one block."
     )
     lines.append("")
     by_section: dict[str, list[dict[str, str]]] = {}
@@ -101,14 +112,14 @@ def write_index(pages: list[dict[str, str]]) -> str:
         for p in items:
             label = p["title"]
             url = p["url"]
-            desc = f" — {p['description']}" if p["description"] else ""
+            desc = f": {p['description']}" if p["description"] else ""
             lines.append(f"- [{label}]({url}){desc}")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
 def write_full(pages: list[dict[str, str]]) -> str:
-    chunks = ["# Zilkworm Documentation — Full Corpus", ""]
+    chunks = ["# Zilkworm Documentation: full corpus", ""]
     for p in pages:
         chunks.append(f"---\n# {p['title']}\n")
         chunks.append(f"Source: {p['url']}\n")

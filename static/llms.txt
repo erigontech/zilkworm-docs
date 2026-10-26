@@ -1,25 +1,35 @@
 # Zilkworm Documentation
 
-> A native, lightweight, performant ZKEVM core written in C++. Generates ZK proofs that an Ethereum block was executed correctly without re-executing the block itself.
-
-## Fundamentals
-
-- [Background](https://zilkworm.erigon.tech/documentation/fundamentals/background) — Background of the technology and internals of the zkEVM
-- [Write Your Own Rollups Using Zilkworm](https://zilkworm.erigon.tech/documentation/fundamentals/write-your-own-rollups-using-zilkworm) — How Zilkworm could power L2/rollup proofs (projection — L2 execution and proving are not yet supported).
-
-## Getting Started
-
-- [CLI reference](https://zilkworm.erigon.tech/documentation/getting-started/cli-reference) — CLI Reference
-- [Ethproofs prover](https://zilkworm.erigon.tech/documentation/getting-started/ethproofs-prover) — This page covers only the Ethproofs integration through the service mode
-- [How it works](https://zilkworm.erigon.tech/documentation/getting-started/how-it-works) — How the Zilkworm prover works — the C++ EVM core runs as riscv32im firmware inside a zkVM that traces execution and proves it with a pluggable backend such as SP1.
-- [Quickstart: Hypercube prover](https://zilkworm.erigon.tech/documentation/getting-started/quickstart-hypercube) — This guide walks you through running proofs for mainnet Ethereum blocks with the SP1 Hypercube prover. Hypercube is deeply integrated within zilkworm to run efficiently. Zilkworm's compiled guest is hosted and run through the Hypercube zkVM with the service command. Optionally, the service provides direct Ethproofs integration. This example guide uses the pre-built docker image.
-- [Running The Prover Service](https://zilkworm.erigon.tech/documentation/getting-started/running-the-prover) — This page describes how to use these features through various commands and subcommands.
+> Stateless Ethereum block execution, proved in a zkVM. Zilkworm compiles a C++ block execution engine to RISC-V guests, and each proof covers one block.
 
 ## Home
 
-- [Welcome](https://zilkworm.erigon.tech/documentation) — Documentation for Zilkworm, a native, lightweight, performant ZKEVM core written in C++.
+- [Overview](https://zilkworm.erigon.tech/): Zilkworm runs stateless Ethereum block execution in RISC-V zkVM guests and ships provers for Airbender and SP1 Hypercube.
+
+## Provers
+
+- [Choosing a prover](https://zilkworm.erigon.tech/provers/choosing-a-prover): Compare the Airbender, Hypercube and ZisK provers and the HashState guest by artifacts, hardware and status.
+- [Airbender prover](https://zilkworm.erigon.tech/provers/airbender-prover): Run the Airbender GPU prover from its Docker image to execute, prove and verify blocks.
+- [Hypercube prover](https://zilkworm.erigon.tech/provers/hypercube-prover): Run the SP1 Hypercube prover binary to execute or prove blocks with the MFBD guest.
+- [ZisK prover](https://zilkworm.erigon.tech/provers/zisk-prover): The ZisK backend lives in draft PR #86 and runs execute-only in CI.
+- [Ethproofs posting](https://zilkworm.erigon.tech/provers/ethproofs-posting): The Airbender and Hypercube services report queued, proving and proved blocks to Ethproofs when given three flags.
+
+## Inside the guest
+
+- [Execution pipeline](https://zilkworm.erigon.tech/inside-the-guest/execution-pipeline): A block goes from witness to guest execution to public values, and the proof ties them to one ELF.
+- [Witness formats](https://zilkworm.erigon.tech/inside-the-guest/witness-formats): Guests read MFBD bundles, SSZ statelessInputBytes or EJSN test fixtures, and host tools produce each one.
+- [Precompiles and syscalls](https://zilkworm.erigon.tech/inside-the-guest/precompiles-and-syscalls): Guests hand keccak, curve and big-integer work to SP1 ecalls or to Airbender and ZisK CSR precompiles.
+- [Proof guarantees](https://zilkworm.erigon.tech/inside-the-guest/proof-guarantees): Each guest commits a fixed public-values layout, and each host checks it to a different degree.
 
 ## Testing
 
-- [Ethereum Execution Tests (EESTs)](https://zilkworm.erigon.tech/documentation/testing/ethereum-execution-tests-eests) — Run the Ethereum Execution Spec Tests (EELS-derived fixtures) against Zilkworm to verify EVM correctness across forks.
-- [RISC-V Testing: EESTs on rv32im via QEMU](https://zilkworm.erigon.tech/documentation/testing/riscv-testing-eests-on-rv32im-via-qemu) — Full guide to running and understanding EESTs for the RISC-V target architecture with QEMU.
+- [Execution spec tests](https://zilkworm.erigon.tech/testing/execution-spec-tests): Zilkworm runs the Ethereum execution spec tests natively and under the Hypercube and Airbender guests.
+- [RISC-V tests under QEMU](https://zilkworm.erigon.tech/testing/riscv-tests-under-qemu): The execution spec tests also run on rv32im and rv64im builds under QEMU.
+- [ERE validation](https://zilkworm.erigon.tech/testing/ere-validation): The HashState guest runs in ERE to check outputs against fixtures and estimate SP1 proving cost.
+
+## Reference
+
+- [CLI reference](https://zilkworm.erigon.tech/reference/cli-reference): Look up the flags, subcommands and exit codes of z6m_prover, z6m_prover_airbender and state_transition.
+- [Releases and assets](https://zilkworm.erigon.tech/reference/releases-and-assets): Each release ships host binaries, guest images and verification keys, with its measured results.
+- [Building from source](https://zilkworm.erigon.tech/reference/building-from-source): Build the guests, host provers and native tools from source and run the unit tests.
+- [Benchmarks and CI](https://zilkworm.erigon.tech/reference/benchmarks-and-ci): GitHub workflows run the unit tests, EEST suites and 200-block benchmarks for the Hypercube and Airbender guests.
