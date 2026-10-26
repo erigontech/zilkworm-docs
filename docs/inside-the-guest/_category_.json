@@ -6,6 +6,6 @@
   "link": {
     "type": "generated-index",
     "slug": "/inside-the-guest",
-    "description": "See what the guest reads, runs and commits, and what its proof guarantees."
+    "description": "See what the guest reads, runs, commits and proves."
   }
 }

@@ -3,11 +3,11 @@ import Link from '@docusaurus/Link';
 import {TerminalFrame, TerminalRow} from '@site/src/components/TerminalList';
 
 const cards = [
-  {label: 'Overview',           desc: 'What Zilkworm ships and where to start.',                  to: '/'},
-  {label: 'Choosing a prover',  desc: 'Compare Airbender, Hypercube and ZisK.',                   to: '/provers/choosing-a-prover'},
-  {label: 'Execution pipeline', desc: 'How a block becomes public values and a proof.',           to: '/inside-the-guest/execution-pipeline'},
-  {label: 'CLI reference',      desc: 'Flags, subcommands and exit codes for each binary.',       to: '/reference/cli-reference'},
-  {label: 'GitHub',             desc: 'Source code, issues and releases.',                        href: 'https://github.com/erigontech/zilkworm'},
+  {label: 'Overview',           desc: 'what Zilkworm ships, where to start',      to: '/'},
+  {label: 'Choosing a prover',  desc: 'which prover to run',                      to: '/provers/choosing-a-prover'},
+  {label: 'Execution pipeline', desc: 'block and witness in, proof out',          to: '/inside-the-guest/execution-pipeline'},
+  {label: 'CLI reference',      desc: 'flags, subcommands, env vars, exit codes', to: '/reference/cli-reference'},
+  {label: 'GitHub',             desc: 'source, issues and releases',              href: 'https://github.com/erigontech/zilkworm'},
 ];
 
 export default function NotFoundContent(): React.ReactElement {

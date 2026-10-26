@@ -6,6 +6,6 @@
   "link": {
     "type": "generated-index",
     "slug": "/reference",
-    "description": "Look up CLI flags, release assets, build steps and CI workflows."
+    "description": "Look up CLI flags, releases, build steps and CI."
   }
 }

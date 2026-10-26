@@ -3,20 +3,40 @@ import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import styles from './styles.module.css';
 
-type FrameProps = {command: string; className?: string; children: ReactNode};
+type FrameProps = {
+  command: string;
+  heading?: string;
+  comment?: string;
+  className?: string;
+  children: ReactNode;
+};
 
-export function TerminalFrame({command, className, children}: FrameProps): ReactNode {
+export function TerminalFrame({command, heading, comment, className, children}: FrameProps): ReactNode {
+  const commandLine = (
+    <>
+      <span className={styles.dollar} aria-hidden="true">$</span>
+      <span>{command}</span>
+    </>
+  );
   return (
     <section className={clsx(styles.frame, className)}>
-      <div className={styles.titleBar}>
-        <span className={styles.dollar} aria-hidden="true">$</span> {command}
-      </div>
+      {heading ? (
+        <header>
+          <h1 className={styles.label}>{heading}</h1>
+          <div className={styles.line}>{commandLine}</div>
+          {comment && (
+            <p className={clsx(styles.line, styles.comment)}>
+              <span aria-hidden="true">#</span>
+              <span>{comment}</span>
+            </p>
+          )}
+        </header>
+      ) : (
+        <div className={clsx(styles.label, styles.line)}>{commandLine}</div>
+      )}
       <ul className={styles.rows}>
         {React.Children.map(children, (child) => <li>{child}</li>)}
       </ul>
-      <div className={styles.cursorLine} aria-hidden="true">
-        <span className={styles.cursor}>▊</span>
-      </div>
     </section>
   );
 }

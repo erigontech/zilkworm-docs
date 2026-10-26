@@ -6,6 +6,11 @@ import {TerminalRow} from '@site/src/components/TerminalList';
 import type {Props} from '@theme/DocCard';
 import type {PropSidebarItemCategory, PropSidebarItemLink} from '@docusaurus/plugin-content-docs';
 
+function summaryOf(item: PropSidebarItemCategory | PropSidebarItemLink): string | undefined {
+  const summary = item.customProps?.summary;
+  return typeof summary === 'string' ? summary : undefined;
+}
+
 function CardCategory({item}: {item: PropSidebarItemCategory}): ReactNode {
   const href = findFirstSidebarItemLink(item);
   const categoryItemsPlural = useDocCardDescriptionCategoryItemsPlural();
@@ -16,7 +21,7 @@ function CardCategory({item}: {item: PropSidebarItemCategory}): ReactNode {
     <TerminalRow
       href={href}
       title={`${item.label}/`}
-      description={item.description ?? categoryItemsPlural(item.items.length)}
+      description={summaryOf(item) ?? item.description ?? categoryItemsPlural(item.items.length)}
       className={item.className}
     />
   );
@@ -28,7 +33,7 @@ function CardLink({item}: {item: PropSidebarItemLink}): ReactNode {
     <TerminalRow
       href={item.href}
       title={item.label}
-      description={item.description ?? doc?.description}
+      description={summaryOf(item) ?? item.description ?? doc?.description}
       external={!isInternalUrl(item.href)}
       className={item.className}
     />

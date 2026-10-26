@@ -6,6 +6,6 @@
   "link": {
     "type": "generated-index",
     "slug": "/testing",
-    "description": "Check the guests against the execution spec tests, QEMU runs and ERE fixtures."
+    "description": "Check the guests against spec tests, QEMU and ERE."
   }
 }
