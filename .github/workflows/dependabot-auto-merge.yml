@@ -1,0 +1,78 @@
+name: Dependabot auto-merge
+
+# Merges Dependabot npm PRs with a patch or minor update once every other
+# check on the PR has passed, then redeploys the site. A merge made with the
+# GITHUB_TOKEN does not trigger the push-based deploy, so the deploy is
+# dispatched explicitly. Major updates, GitHub Actions updates and PRs with a
+# failing check are left for the weekly review (see the docs owner's runbook).
+
+on:
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'erigontech/zilkworm-docs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+      checks: read
+    steps:
+      - name: Read the Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for the other checks, merge and deploy
+        if: >-
+          steps.meta.outputs.package-ecosystem == 'npm_and_yarn' &&
+          steps.meta.outputs.directory == '/' &&
+          (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+           steps.meta.outputs.update-type == 'version-update:semver-minor')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          REPO: ${{ github.repository }}
+          SELF: ${{ github.workflow }}
+        run: |
+          set -euo pipefail
+          sleep 60
+          ready=false
+          for _ in $(seq 1 60); do
+            rollup=$(gh pr view "$PR" --repo "$REPO" --json headRefOid,statusCheckRollup)
+            if [ "$(jq -r .headRefOid <<<"$rollup")" != "$HEAD_SHA" ]; then
+              echo "The PR has a newer commit; the run for that commit takes over."
+              exit 0
+            fi
+            others=$(jq --arg self "$SELF" '[.statusCheckRollup[] | select(.workflowName != $self)]' <<<"$rollup")
+            total=$(jq 'length' <<<"$others")
+            pending=$(jq '[.[] | select((.status // "COMPLETED") != "COMPLETED" or (.state // "") == "PENDING" or (.state // "") == "EXPECTED")] | length' <<<"$others")
+            failed=$(jq '[.[] | select((.conclusion // .state // "") as $c | ["FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE","ERROR"] | index($c))] | length' <<<"$others")
+            if [ "$failed" -gt 0 ]; then
+              echo "A check failed; leaving the PR for the weekly review."
+              exit 0
+            fi
+            if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ]; then
+              ready=true
+              break
+            fi
+            sleep 30
+          done
+          if [ "$ready" != true ]; then
+            echo "The other checks did not finish (or never started); leaving the PR for the weekly review."
+            exit 0
+          fi
+          gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$HEAD_SHA"
+          gh workflow run docs-deploy.yml --repo "$REPO" --ref "$BASE"
+          echo "Merged #$PR and dispatched docs-deploy.yml on $BASE."
